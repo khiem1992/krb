@@ -17,9 +17,6 @@
             color: #6b7280; /* slate-500 */
             display: block;
             margin-top: 2px;
-            
-        }
-
         /* Sử dụng font Inter cho toàn bộ trang */
         body { font-family: 'Inter', sans-serif; }
         
@@ -112,8 +109,8 @@
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <!-- Tối ưu 2: Thống nhất cấu trúc Card -->
                     <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Nay</h3>
-                    <small id="time-hom-nay" class="text-slate-500 text-xs block mt-1"></small>
                     <div class="mt-4 pt-4 border-t border-slate-200">
+                        <small id="time-hom-nay" class="text-slate-500 text-xs block mt-1"></small>
                         <div id="hd-hom-nay-bang"></div>
                     </div>
                 </div>
@@ -124,6 +121,8 @@
                         <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Qua</h3>
                         <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
+                    <!-- Tối ưu 1: Đổi màu border -->
+                    <!-- SỬA ĐỔI: Thêm class 'hidden' để mục này đóng lại khi tải trang -->
                     <div id="hd-hom-qua-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
                         <small id="time-hom-qua" class="text-slate-500 text-xs block mt-1"></small>
                         <div id="hd-hom-qua-bang"></div>
@@ -171,7 +170,7 @@
 
     <script>
         // === CÀI ĐẶT ===
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxYt_9TXwleEcz77QyLh5JM0zg7ZC_omLrW6gXQc4gQ7cvuOe5brLOQY0jfHtZskpDN/exec?';
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxYiA26uo9yt3a2r-U6-AVAPVeaR5968b2XSG5KrAdv6sC3vibk-89dTrR5nIr4K0AP/exec?';
         const CACHE_KEY = 'BaoCaoCache_v3';
         const CACHE_TTL = 24 * 60 * 60 * 1000;
         let globalData = {}, chartInstance = null;
@@ -312,19 +311,15 @@
             const card = container.closest('.bg-white');
             if (!card) return;
 
-           if (!dataBlock || !dataBlock.rows || dataBlock.rows.length === 0) {
-    if (elementId !== 'hd-hom-nay-bang') {
-        card.style.display = 'none';
-    } else {
-        container.innerHTML = `<p class="text-sm text-slate-500 italic">${emptyMessage}</p>`;
-    }
-    return;
-}
-
-// === DÒNG MỚI: BẮT BUỘC HIỆN CARD ĐỂ RENDER BẢNG ===
-card.style.display = 'block';  // ← Đảm bảo bảng được render dù collapse
-
-card.style.display = 'block';  // (giữ dòng cũ nếu cần, nhưng dòng trên đủ)
+            if (!dataBlock || !dataBlock.rows || dataBlock.rows.length === 0) {
+                if (elementId !== 'hd-hom-nay-bang') {
+                    card.style.display = 'none';
+                } else {
+                    // Tối ưu 1: Đổi màu chữ
+                    container.innerHTML = `<p class="text-sm text-slate-500 italic">${emptyMessage}</p>`;
+                }
+                return;
+            }
 
             card.style.display = 'block';
 
@@ -573,5 +568,3 @@ card.style.display = 'block';  // (giữ dòng cũ nếu cần, nhưng dòng tr�
     </script>
 </body>
 </html>
-
-
