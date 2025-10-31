@@ -105,15 +105,20 @@
                     </div>
                 </div>
 
-                <!-- 2. HÓA ĐƠN HÔM NAY -->
+                
+                 <!-- 2. HÓA ĐƠN HÔM NAY -->
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
-                    <!-- Tối ưu 2: Thống nhất cấu trúc Card -->
-                    <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Nay</h3>
-                    <div class="mt-4 pt-4 border-t border-slate-200">
-                        <small id="time-hom-nay" class="text-slate-500 text-xs block mt-1"></small>
-                        <div id="hd-hom-nay-bang"></div>
-                    </div>
-                </div>
+                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
+                        <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Nay</h3>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                            <div id="hd-hom-nay-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
+                                <small id="time-hom-nay" class="text-slate-500 text-xs block mt-1 mb-2"></small>
+                                <div id="hd-hom-nay-bang"></div>
+                                </div>
+                                </div>
+
 
                 <!-- 3. HÓA ĐƠN HÔM QUA -->
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
@@ -155,18 +160,22 @@
                     </div>
                 </div>
 
-                <!-- 6. BIỂU ĐỒ -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <!-- Tối ưu 2: Thống nhất cấu trúc Card -->
-                    <h3 class="text-xl font-semibold text-slate-900">Doanh Thu Tháng (So Sánh)</h3>
-                    <div class="mt-4 pt-4 border-t border-slate-200">
-                        <div class="h-80"><canvas id="revenue-chart"></canvas></div>
-                    </div>
-                </div>
-
-            </div>
+          <!-- 6. BIỂU ĐỒ -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+              <!-- Thêm header có thể click -->
+              <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
+                  <h3 class="text-xl font-semibold text-slate-900">Doanh Thu Tháng (So Sánh)</h3>
+        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
         </div>
-    </div>
+        <!-- Thêm class 'hidden' để mặc định ẩn -->
+        <div id="revenue-chart-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
+        <div class="h-80">
+            <canvas id="revenue-chart"></canvas>
+            </div>
+            </div>
+            </div>
 
     <script>
         // === CÀI ĐẶT ===
