@@ -173,7 +173,7 @@
 
     <script>
         // === CÀI ĐẶT ===
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxYt_9TXwleEcz77QyLh5JM0zg7ZC_omLrW6gXQc4gQ7cvuOe5brLOQY0jfHtZskpDN/exec?=v4';
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxYt_9TXwleEcz77QyLh5JM0zg7ZC_omLrW6gXQc4gQ7cvuOe5brLOQY0jfHtZskpDN/exec?';
         const CACHE_KEY = 'BaoCaoCache_v3';
         const CACHE_TTL = 24 * 60 * 60 * 1000;
         let globalData = {}, chartInstance = null;
@@ -314,15 +314,19 @@
             const card = container.closest('.bg-white');
             if (!card) return;
 
-            if (!dataBlock || !dataBlock.rows || dataBlock.rows.length === 0) {
-                if (elementId !== 'hd-hom-nay-bang') {
-                    card.style.display = 'none';
-                } else {
-                    // Tối ưu 1: Đổi màu chữ
-                    container.innerHTML = `<p class="text-sm text-slate-500 italic">${emptyMessage}</p>`;
-                }
-                return;
-            }
+           if (!dataBlock || !dataBlock.rows || dataBlock.rows.length === 0) {
+    if (elementId !== 'hd-hom-nay-bang') {
+        card.style.display = 'none';
+    } else {
+        container.innerHTML = `<p class="text-sm text-slate-500 italic">${emptyMessage}</p>`;
+    }
+    return;
+}
+
+// === DÒNG MỚI: BẮT BUỘC HIỆN CARD ĐỂ RENDER BẢNG ===
+card.style.display = 'block';  // ← Đảm bảo bảng được render dù collapse
+
+card.style.display = 'block';  // (giữ dòng cũ nếu cần, nhưng dòng trên đủ)
 
             card.style.display = 'block';
 
