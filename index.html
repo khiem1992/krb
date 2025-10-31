@@ -11,15 +11,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-    
-        #time-hom-nay, #time-hom-qua {
-            font-size: 11px;
-            color: #6b7280; /* slate-500 */
-            display: block;
-            margin-top: 2px;
-            
-        }
-
         /* Sử dụng font Inter cho toàn bộ trang */
         body { font-family: 'Inter', sans-serif; }
         
@@ -112,7 +103,6 @@
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <!-- Tối ưu 2: Thống nhất cấu trúc Card -->
                     <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Nay</h3>
-                    <small id="time-hom-nay" class="text-slate-500 text-xs block mt-1"></small>
                     <div class="mt-4 pt-4 border-t border-slate-200">
                         <div id="hd-hom-nay-bang"></div>
                     </div>
@@ -124,7 +114,6 @@
                         <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Qua</h3>
                         <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                     <small id="time-hom-qua" class="text-slate-500 text-xs block mt-1"></small>
                     <!-- Tối ưu 1: Đổi màu border -->
                     <!-- SỬA ĐỔI: Thêm class 'hidden' để mục này đóng lại khi tải trang -->
                     <div id="hd-hom-qua-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
@@ -173,7 +162,7 @@
 
     <script>
         // === CÀI ĐẶT ===
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxYt_9TXwleEcz77QyLh5JM0zg7ZC_omLrW6gXQc4gQ7cvuOe5brLOQY0jfHtZskpDN/exec';
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxYt_9TXwleEcz77QyLh5JM0zg7ZC_omLrW6gXQc4gQ7cvuOe5brLOQY0jfHtZskpDN/exec?v=4';
         const CACHE_KEY = 'BaoCaoCache_v3';
         const CACHE_TTL = 24 * 60 * 60 * 1000;
         let globalData = {}, chartInstance = null;
@@ -222,9 +211,6 @@
                 .then(res => {
                     if (res.status !== 'success') throw new Error(res.message || 'Lỗi server');
                     updateInfo(res);
-                    // Hiển thị thời gian lọc hóa đơn (từ GAS)
-                    document.getElementById('time-hom-nay').textContent = res.thoiGianHomNay || '';
-                    document.getElementById('time-hom-qua').textContent = res.thoiGianHomQua || '';
 
                     const cached = getCache();
                     if (!cached || cached.lastUpdated !== res.lastUpdated) {
@@ -571,3 +557,5 @@
     </script>
 </body>
 </html>
+
+
