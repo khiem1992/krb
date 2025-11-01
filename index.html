@@ -270,54 +270,50 @@
         }
 
         // === RENDER TÌNH TRẠNG PHÒNG (CÓ VIP CLICKABLE) ===
-        function renderTrangThaiPhong(data) {
-            const thongKeDiv = document.getElementById('trang-thai-thong-ke');
-            
-            // Hiển thị thống kê
-            const thongKeText = data.thongKe.homNay;
-            thongKeDiv.innerHTML = `<div class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 font-medium">${thongKeText}</div>`;
+function renderTrangThaiPhong(data) {
+    const thongKeDiv = document.getElementById('trang-thai-thong-ke');
 
-            // ← THÊM NÚT VIP CLICKABLE
-            const vipButtons = document.createElement('div');
-            vipButtons.className = 'mt-3 flex gap-3 flex-wrap';
-            vipButtons.innerHTML = `
-                <span class="text-sm text-slate-600">Xem chi tiết:</span>
-                <span class="vip-clickable" onclick="showVIPDetail('VIP 1')">VIP 1</span>
-                <span class="text-slate-400">|</span>
-                <span class="vip-clickable" onclick="showVIPDetail('VIP 2')">VIP 2</span>
-                <span class="text-slate-400">|</span>
-                <span class="vip-clickable" onclick="showVIPDetail('VIP 3')">VIP 3</span>
-            `;
-            thongKeDiv.appendChild(vipButtons);
+    // Hiển thị thống kê
+    const thongKeText = data.thongKe.homNay;
+    thongKeDiv.innerHTML = `<div class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 font-medium">${thongKeText}</div>`;
+    // Hiển thị các phòng
+    const container = document.getElementById('trang-thai-bang');
+    if (!data.rooms || data.rooms.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-500 italic">Không có dữ liệu phòng.</p>`;
+        return;
+    }
 
-            // Hiển thị các phòng
-            const container = document.getElementById('trang-thai-bang');
-            if (!data.rooms || data.rooms.length === 0) {
-                container.innerHTML = `<p class="text-sm text-slate-500 italic">Không có dữ liệu phòng.</p>`;
-                return;
-            }
+    let html = '';
+    data.rooms.forEach(room => {
+        const [tenPhong, trangThai, gioVaoSerial, ghiChu] = room;
+        const colorClasses = getTrangThaiClasses(trangThai);
+        const gioVaoDisplay = (trangThai.toLowerCase().includes('có khách') || trangThai.toLowerCase().includes('chưa dọn')) 
+            ? convertExcelDate(gioVaoSerial) : '';
 
-            let html = '';
-            data.rooms.forEach(room => {
-                const [tenPhong, trangThai, gioVaoSerial, ghiChu] = room;
-                const colorClasses = getTrangThaiClasses(trangThai);
-                const gioVaoDisplay = (trangThai.toLowerCase().includes('có khách') || trangThai.toLowerCase().includes('chưa dọn')) 
-                    ? convertExcelDate(gioVaoSerial) : '';
-                
-                html += `
-                    <div class="p-3.5 rounded-lg border ${colorClasses} shadow-sm space-y-1 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                        <div class="flex justify-between items-start">
-                            <span class="font-bold text-lg">${tenPhong}</span>
-                            <span class="font-semibold text-xs px-2 py-0.5 rounded-full ${colorClasses}">${trangThai}</span>
-                        </div>
-                        <div class="text-sm space-y-0.5">
-                            <p><strong>Giờ:</strong> ${gioVaoDisplay || '---'}</p>
-                            <p class="text-xs"><strong>Note:</strong> ${ghiChu || '---'}</p>
-                        </div>
-                    </div>`;
-            });
-            container.innerHTML = html;
+        // Kiểm tra tên phòng có chứa "VIP 1", "VIP 2", "VIP 3" để thêm onclick showVIPDetail tương ứng
+        let onclickAttr = '';
+        if (/VIP\s*1/i.test(tenPhong)) {
+            onclickAttr = `onclick="showVIPDetail('VIP 1')" style="cursor:pointer"`;
+        } else if (/VIP\s*2/i.test(tenPhong)) {
+            onclickAttr = `onclick="showVIPDetail('VIP 2')" style="cursor:pointer"`;
+        } else if (/VIP\s*3/i.test(tenPhong)) {
+            onclickAttr = `onclick="showVIPDetail('VIP 3')" style="cursor:pointer"`;
         }
+
+        html += `
+            <div class="p-3.5 rounded-lg border ${colorClasses} shadow-sm space-y-1 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200" ${onclickAttr}>
+                <div class="flex justify-between items-start">
+                    <span class="font-bold text-lg">${tenPhong}</span>
+                    <span class="font-semibold text-xs px-2 py-0.5 rounded-full ${colorClasses}">${trangThai}</span>
+                </div>
+                <div class="text-sm space-y-0.5">
+                    <p><strong>Giờ:</strong> ${gioVaoDisplay || '---'}</p>
+                    <p class="text-xs"><strong>Note:</strong> ${ghiChu || '---'}</p>
+                </div>
+            </div>`;
+    });
+    container.innerHTML = html;
+}
 
         // === HÀM MỚI: HIỂN THỊ MODAL CHI TIẾT VIP ===
         function showVIPDetail(vipName) {
