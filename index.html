@@ -4,45 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Báo Cáo Online</title>
-
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="https://script.google.com/macros/s/AKfycbxYiA26uo9yt3a2r-U6-AVAPVeaR5968b2XSG5KrAdv6sC3vibk-89dTrR5nIr4K0AP/exec" as="fetch" crossorigin>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-    
-        #time-hom-nay, #time-hom-qua {
-            font-size: 11px;
-            color: #6b7280; /* slate-500 */
-            display: block;
-            margin-top: 2px;
-        /* Sử dụng font Inter cho toàn bộ trang */
         body { font-family: 'Inter', sans-serif; }
-        
-        /* Chuyển động cho Modal */
         #detail-modal { transition: opacity 0.3s ease; }
         #modal-panel { transition: transform 0.3s ease; }
-        
-        /* Chuyển động cho icon chevron (mũi tên) khi đóng/mở */
         .chevron { transition: transform 0.2s ease-in-out; }
         .chevron-rotated { transform: rotate(180deg); }
-        
-        /* Chuyển động cho nút Refresh */
         #refresh-button { transition: all 0.3s ease; }
         #refresh-button.disabled { opacity: 0.5; background-color: #555; cursor: not-allowed; transform: scale(0.95); }
         #refresh-icon { transition: transform 0.5s ease; }
         #refresh-button.loading #refresh-icon { transform: rotate(360deg); }
+        .vip-clickable { 
+            color: #2563eb; 
+            text-decoration: underline; 
+            cursor: pointer; 
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .vip-clickable:hover { 
+            color: #1d4ed8; 
+            text-decoration: none;
+            transform: scale(1.05);
+        }
     </style>
 </head>
-<!-- Tối ưu 1: Đổi sang tông màu 'slate' cho nền và chữ -->
 <body class="bg-slate-100 text-slate-800">
 
-    <!-- MODAL -->
-    <!-- Tối ưu 1: Đổi màu nền mờ sang tông đậm hơn -->
+    <!-- MODAL CHUNG -->
     <div id="detail-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-75 flex items-center justify-center z-50 p-4" onclick="closeModal()">
-        <div id="modal-panel" class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <!-- Tối ưu 1: Đổi màu border và chữ -->
+        <div id="modal-panel" class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
             <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
                 <h3 id="modal-title" class="text-xl font-semibold text-slate-900">Chi Tiết</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
@@ -54,14 +47,11 @@
     </div>
 
     <!-- REFRESH BUTTON -->
-    <!-- Tối ưu 3: Đổi sang màu 'indigo' cho cảm giác "công nghệ" hơn -->
     <button id="refresh-button" onclick="forceFetchData()" class="fixed bottom-6 right-6 z-40 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 active:scale-95">
-        <!-- ICON ĐÃ THAY ĐỔI: Sử dụng icon "ArrowPath" (mũi tên xoay tròn) đơn giản hơn -->
         <svg id="refresh-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.183m-4.992 0v4.992" />
         </svg>
     </button>
-    <!-- Tối ưu 1: Đổi màu toast -->
     <div id="refresh-toast" class="hidden fixed bottom-24 right-6 z-40 bg-slate-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
         Đã cập nhật dữ liệu mới!
     </div>
@@ -72,32 +62,25 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <!-- Tối ưu 1 & 3: Đổi màu chữ và thêm 'animate-pulse' -->
             <span class="text-lg text-slate-700 mt-4 animate-pulse">Đang tải dữ liệu báo cáo...</span>
         </div>
 
         <div id="dashboard" class="hidden">
-            <!-- Tối ưu 1 & 3: Đổi màu chữ và thêm 'tracking-tight' -->
             <h1 class="text-4xl font-bold tracking-tight text-center text-slate-900 mb-4">Báo Cáo Tổng Hợp</h1>
 
-            <!-- CẬP NHẬT THỜI GIAN -->
-            <!-- Tối ưu 1: Đổi màu chữ -->
             <div id="update-info" class="hidden text-center text-sm text-slate-600 mb-6">
                 <span id="update-time">Đang tải...</span>
             </div>
 
-            <!-- LỖI BANNER -->
             <div id="data-error-banner" class="hidden mb-6 p-5 bg-red-100 border-l-4 border-red-500 text-red-800 rounded-lg shadow-md">
                 <h4 class="font-bold text-lg">Không thể tải dữ liệu!</h4>
                 <p class="mt-3 font-mono text-sm bg-red-50 p-2 rounded" id="fetch-error-details"></p>
             </div>
 
-            <!-- SẮP XẾP MỚI -->
             <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
 
-                <!-- 1. TRẠNG THÁI PHÒNG -->
+                <!-- 1. TÌNH TRẠNG HOẠT ĐỘNG -->
                 <div class="lg:col-span-2 2xl:col-span-1 bg-white rounded-xl shadow-lg p-6">
-                    <!-- Tối ưu 2: Thống nhất cấu trúc Card -->
                     <h3 class="text-xl font-semibold text-slate-900">Tình Trạng Hoạt Động</h3>
                     <div class="mt-4 pt-4 border-t border-slate-200">
                         <div id="trang-thai-thong-ke" class="space-y-3 mb-5"></div>
@@ -105,31 +88,30 @@
                     </div>
                 </div>
 
-                
-                 <!-- 2. HÓA ĐƠN HÔM NAY -->
+                <!-- 2. HÓA ĐƠN HÔM NAY -->
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Nay</h3>
                         <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
-                            <div id="hd-hom-nay-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
-                                <small id="time-hom-nay" class="text-slate-500 text-xs block mt-1 mb-2"></small>
-                                <div id="hd-hom-nay-bang"></div>
-                                </div>
-                                </div>
-
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div id="hd-hom-nay-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
+                        <small id="time-hom-nay" class="text-slate-500 text-xs block mb-2"></small>
+                        <div id="hd-hom-nay-bang"></div>
+                    </div>
+                </div>
 
                 <!-- 3. HÓA ĐƠN HÔM QUA -->
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Qua</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
-                    <!-- Tối ưu 1: Đổi màu border -->
-                    <!-- SỬA ĐỔI: Thêm class 'hidden' để mục này đóng lại khi tải trang -->
                     <div id="hd-hom-qua-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
-                        <small id="time-hom-qua" class="text-slate-500 text-xs block mt-1"></small>
+                        <small id="time-hom-qua" class="text-slate-500 text-xs block mb-2"></small>
                         <div id="hd-hom-qua-bang"></div>
                     </div>
                 </div>
@@ -138,10 +120,10 @@
                 <div class="lg:col-span-2 2xl:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Sổ Nợ</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
-                    <!-- Tối ưu 1: Đổi màu border -->
-                    <!-- SỬA ĐỔI: Thêm class 'hidden' để mục này đóng lại khi tải trang -->
                     <div id="so-no-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
                         <div id="so-no-bang"></div>
                     </div>
@@ -151,38 +133,42 @@
                 <div class="bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Doanh Thu 7 Ngày</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
-                    <!-- Tối ưu 1: Đổi màu border -->
-                    <!-- SỬA ĐỔI: Thêm class 'hidden' để mục này đóng lại khi tải trang -->
                     <div id="doanh-thu-7-ngay-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
                         <div id="doanh-thu-7-ngay-bang" class="space-y-1"></div>
                     </div>
                 </div>
 
-          <!-- 6. BIỂU ĐỒ -->
-          <div class="bg-white rounded-xl shadow-lg p-6">
-              <!-- Thêm header có thể click -->
-              <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
-                  <h3 class="text-xl font-semibold text-slate-900">Doanh Thu Tháng (So Sánh)</h3>
-        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-        </svg>
+                <!-- 6. BIỂU ĐỒ -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
+                        <h3 class="text-xl font-semibold text-slate-900">Doanh Thu Tháng (So Sánh)</h3>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div id="revenue-chart-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
+                        <div class="h-80">
+                            <canvas id="revenue-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <!-- Thêm class 'hidden' để mặc định ẩn -->
-        <div id="revenue-chart-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
-        <div class="h-80">
-            <canvas id="revenue-chart"></canvas>
-            </div>
-            </div>
-            </div>
+    </div>
 
     <script>
         // === CÀI ĐẶT ===
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxYiA26uo9yt3a2r-U6-AVAPVeaR5968b2XSG5KrAdv6sC3vibk-89dTrR5nIr4K0AP/exec?';
-        const CACHE_KEY = 'BaoCaoCache_v3';
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx2mALDtcjCvxDzC70bk8uv46KaPM6bmyaw_bLcFPyFnV1qgiASGKDITBi24gapB8um/exec?';
+        const CACHE_KEY = 'BaoCaoCache_v11';
         const CACHE_TTL = 24 * 60 * 60 * 1000;
-        let globalData = {}, chartInstance = null;
+        
+        let globalData = {};
+        let vipRoomsData = {}; // ← LƯU DỮ LIỆU VIP
+        let chartInstance = null;
 
         const pageLoader = document.getElementById('page-loader');
         const dashboard = document.getElementById('dashboard');
@@ -191,7 +177,7 @@
         const refreshButton = document.getElementById('refresh-button');
         const refreshToast = document.getElementById('refresh-toast');
 
-        // === HIỂN THỊ CHỈ "BÁO CÁO TẠO LÚC" (dd/mm/yyyy hh:mm) ===
+        // === HIỂN THỊ "BÁO CÁO TẠO LÚC" ===
         function updateInfo(obj) {
             const a1Raw = (obj.a1 || '').replace(/^\uFEFF/, '').trim();
             if (!a1Raw) {
@@ -210,6 +196,7 @@
             const cached = getCache();
             if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
                 globalData = cached.data;
+                vipRoomsData = cached.vipRooms || {}; // ← KHÔI PHỤC VIP DATA
                 renderLight();
                 setTimeout(renderHeavy, 100);
                 updateInfo(cached);
@@ -227,15 +214,19 @@
                 .then(r => r.json())
                 .then(res => {
                     if (res.status !== 'success') throw new Error(res.message || 'Lỗi server');
+                    
                     updateInfo(res);
-                    // Hiển thị thời gian lọc hóa đơn (từ GAS)
                     document.getElementById('time-hom-nay').textContent = res.thoiGianHomNay || '';
                     document.getElementById('time-hom-qua').textContent = res.thoiGianHomQua || '';
+
+                    // ← LƯU DỮ LIỆU VIP
+                    vipRoomsData = res.vipRooms || {};
+                    console.log('✅ VIP Data loaded:', vipRoomsData);
 
                     const cached = getCache();
                     if (!cached || cached.lastUpdated !== res.lastUpdated) {
                         globalData = res.data;
-                        setCache(res.data, res.lastUpdated, res.a1);
+                        setCache(res.data, res.lastUpdated, res.a1, res.vipRooms); // ← LƯU VÀO CACHE
                         renderDashboard(false);
                         if (force) showToast('Cập nhật thành công!');
                     } else if (force) {
@@ -278,14 +269,30 @@
             else renderHeavy();
         }
 
-        // === RENDER TRẠNG THÁI PHÒNG ===
+        // === RENDER TÌNH TRẠNG PHÒNG (CÓ VIP CLICKABLE) ===
         function renderTrangThaiPhong(data) {
             const thongKeDiv = document.getElementById('trang-thai-thong-ke');
-            thongKeDiv.innerHTML = `<div class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 font-medium">${data.thongKe.homNay}</div>`;
+            
+            // Hiển thị thống kê
+            const thongKeText = data.thongKe.homNay;
+            thongKeDiv.innerHTML = `<div class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 font-medium">${thongKeText}</div>`;
 
+            // ← THÊM NÚT VIP CLICKABLE
+            const vipButtons = document.createElement('div');
+            vipButtons.className = 'mt-3 flex gap-3 flex-wrap';
+            vipButtons.innerHTML = `
+                <span class="text-sm text-slate-600">Xem chi tiết:</span>
+                <span class="vip-clickable" onclick="showVIPDetail('VIP 1')">VIP 1</span>
+                <span class="text-slate-400">|</span>
+                <span class="vip-clickable" onclick="showVIPDetail('VIP 2')">VIP 2</span>
+                <span class="text-slate-400">|</span>
+                <span class="vip-clickable" onclick="showVIPDetail('VIP 3')">VIP 3</span>
+            `;
+            thongKeDiv.appendChild(vipButtons);
+
+            // Hiển thị các phòng
             const container = document.getElementById('trang-thai-bang');
             if (!data.rooms || data.rooms.length === 0) {
-                // Tối ưu 1: Đổi màu chữ
                 container.innerHTML = `<p class="text-sm text-slate-500 italic">Không có dữ liệu phòng.</p>`;
                 return;
             }
@@ -294,11 +301,11 @@
             data.rooms.forEach(room => {
                 const [tenPhong, trangThai, gioVaoSerial, ghiChu] = room;
                 const colorClasses = getTrangThaiClasses(trangThai);
-                const gioVaoDisplay = (trangThai.toLowerCase().includes('có khách') || trangThai.toLowerCase().includes('chưa dọn')) ? convertExcelDate(gioVaoSerial) : '';
+                const gioVaoDisplay = (trangThai.toLowerCase().includes('có khách') || trangThai.toLowerCase().includes('chưa dọn')) 
+                    ? convertExcelDate(gioVaoSerial) : '';
                 
-                // Tối ưu 4: Thêm hiệu ứng hover cho card phòng
                 html += `
-                    <div class="p-3.5 rounded-lg border ${colorClasses} shadow-sm space-y-1 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default">
+                    <div class="p-3.5 rounded-lg border ${colorClasses} shadow-sm space-y-1 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                         <div class="flex justify-between items-start">
                             <span class="font-bold text-lg">${tenPhong}</span>
                             <span class="font-semibold text-xs px-2 py-0.5 rounded-full ${colorClasses}">${trangThai}</span>
@@ -312,7 +319,182 @@
             container.innerHTML = html;
         }
 
-        // === RENDER BẢNG (CỘT PHỤC VỤ CHỈ HIỆN SỐ NV) ===
+        // === HÀM MỚI: HIỂN THỊ MODAL CHI TIẾT VIP ===
+        function showVIPDetail(vipName) {
+            console.log('🔍 Tìm VIP:', vipName);
+            console.log('📦 VIP Data available:', Object.keys(vipRoomsData));
+            
+            // Normalize tên (xử lý "VIP 1" vs "VIP1")
+            const normalizedName = vipName.replace(/\s+/g, ' ').trim();
+            let vipData = vipRoomsData[normalizedName];
+            
+            // Thử tìm với các variant
+            if (!vipData) {
+                const variants = [
+                    normalizedName.replace(/\s/g, ''),  // "VIP1"
+                    normalizedName.toUpperCase(),        // "VIP 1"
+                    normalizedName.toLowerCase()         // "vip 1"
+                ];
+                
+                for (const variant of variants) {
+                    vipData = vipRoomsData[variant];
+                    if (vipData) {
+                        console.log('✅ Tìm thấy với variant:', variant);
+                        break;
+                    }
+                }
+            }
+            
+            if (!vipData) {
+                console.error('❌ Không tìm thấy dữ liệu cho:', vipName);
+                alert(`Không có dữ liệu chi tiết cho ${vipName}`);
+                return;
+            }
+
+            document.getElementById('modal-title').innerText = `Chi Tiết - ${vipName}`;
+            
+            let html = '<div class="space-y-6">';
+            
+            // 1. THÔNG TIN CHUNG
+            html += `
+                <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200">
+                    <h4 class="font-semibold text-indigo-900 mb-3 text-lg flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Thông Tin Chung
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="bg-white rounded p-2">
+                            <span class="text-slate-600 text-xs block">Giờ vào</span>
+                            <strong class="text-indigo-700">${formatDateTime(vipData.gioVao, true)}</strong>
+                        </div>
+                        <div class="bg-white rounded p-2">
+                            <span class="text-slate-600 text-xs block">Giờ ra</span>
+                            <strong class="text-indigo-700">${formatDateTime(vipData.gioRa, true)}</strong>
+                        </div>
+                        <div class="bg-white rounded p-2">
+                            <span class="text-slate-600 text-xs block">Chính sách</span>
+                            <strong class="text-green-600">${vipData.chinhSach || '---'}</strong>
+                        </div>
+                        <div class="bg-white rounded p-2">
+                            <span class="text-slate-600 text-xs block">Số NV</span>
+                            <strong class="text-blue-600">${vipData.soNhanVien} người</strong>
+                        </div>
+                    </div>
+                </div>`;
+            
+            // 2. THỰC ĐƠN
+            if (vipData.thucDon && vipData.thucDon.length > 0) {
+                html += `
+                    <div>
+                        <h4 class="font-semibold text-slate-900 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            Thực Đơn (${vipData.thucDon.length} món)
+                        </h4>
+                        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-orange-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-slate-700 uppercase">Món</th>
+                                        <th class="px-4 py-2 text-center text-xs font-medium text-slate-700 uppercase">SL</th>
+                                        <th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Đơn giá</th>
+                                        <th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">`;
+                
+                vipData.thucDon.forEach(mon => {
+                    html += `
+                        <tr class="hover:bg-orange-50 transition-colors">
+                            <td class="px-4 py-2 text-sm text-slate-800">${mon.ten}</td>
+                            <td class="px-4 py-2 text-sm text-center font-medium text-slate-700">${mon.soLuong}</td>
+                            <td class="px-4 py-2 text-sm text-right text-slate-600">${formatCurrency(mon.donGia)}</td>
+                            <td class="px-4 py-2 text-sm text-right font-semibold text-slate-900">${formatCurrency(mon.thanhTien)}</td>
+                        </tr>`;
+                });
+                
+                html += `
+                                </tbody>
+                                <tfoot class="bg-orange-50 border-t-2 border-orange-200">
+                                    <tr>
+                                        <td colspan="3" class="px-4 py-3 text-sm font-bold text-slate-700 text-right">Tổng thực đơn:</td>
+                                        <td class="px-4 py-3 text-base font-bold text-orange-600 text-right">${formatCurrency(vipData.tongThucDon)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>`;
+            } else {
+                html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Chưa có thực đơn</div>`;
+            }
+            
+            // 3. NHÂN VIÊN
+            if (vipData.nhanVien && vipData.nhanVien.length > 0) {
+                html += `
+                    <div>
+                        <h4 class="font-semibold text-slate-900 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            Nhân Viên Phục Vụ (${vipData.soNhanVien})
+                        </h4>
+                        <div class="space-y-3">`;
+                
+                vipData.nhanVien.forEach((nv, idx) => {
+                    html += `
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="font-semibold text-slate-900 text-base">${idx + 1}. ${nv.ten}</span>
+                                    <p class="text-xs text-slate-600 mt-1">
+                                        <strong>Thời gian:</strong> ${formatDateTime(nv.gioVao)} → ${formatDateTime(nv.gioRa)}
+                                    </p>
+                                    <p class="text-xs text-slate-600">
+                                        <strong>Tổng:</strong> ${convertMinutesToHM(nv.tongPhut)}
+                                    </p>
+                                </div>
+                                <span class="font-bold text-lg text-blue-700">${formatCurrency(nv.thanhTien)}</span>
+                            </div>
+                        </div>`;
+                });
+                
+                html += `
+                        </div>
+                        <div class="mt-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-4 border-2 border-blue-300">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-slate-800 text-lg">Tổng tiền nhân viên:</span>
+                                <span class="font-bold text-blue-700 text-2xl">${formatCurrency(vipData.tongNhanVien)}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            } else {
+                html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Chưa có nhân viên phục vụ</div>`;
+            }
+            
+            // 4. TỔNG KẾT
+            const tongCong = (vipData.tongThucDon || 0) + (vipData.tongNhanVien || 0);
+            html += `
+                <div class="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-5 border-2 border-green-400">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-slate-900 text-xl">TỔNG CỘNG:</span>
+                        <span class="font-bold text-green-700 text-3xl">${formatCurrency(tongCong)}</span>
+                    </div>
+                    <div class="mt-2 text-sm text-slate-600 flex justify-between">
+                        <span>Thực đơn: ${formatCurrency(vipData.tongThucDon)}</span>
+                        <span>Nhân viên: ${formatCurrency(vipData.tongNhanVien)}</span>
+                    </div>
+                </div>`;
+            
+            html += '</div>';
+            
+            document.getElementById('modal-content').innerHTML = html;
+            openModal();
+        }
+
+        // === RENDER BẢNG ===
         function renderTable(dataBlock, elementId, emptyMessage) {
             const container = document.getElementById(elementId);
             if (!container) return;
@@ -324,7 +506,6 @@
                 if (elementId !== 'hd-hom-nay-bang') {
                     card.style.display = 'none';
                 } else {
-                    // Tối ưu 1: Đổi màu chữ
                     container.innerHTML = `<p class="text-sm text-slate-500 italic">${emptyMessage}</p>`;
                 }
                 return;
@@ -337,19 +518,16 @@
 
             let html = '<div class="flex flex-col"><div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">';
             html += '<div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">';
-            // Tối ưu 1: Đổi màu border
             html += '<div class="shadow-sm ring-1 ring-black ring-opacity-5 overflow-hidden border-b border-slate-200 sm:rounded-lg">';
             html += '<table class="min-w-full divide-y divide-slate-200">';
-            // Tối ưu 1: Đổi màu header bảng
             html += '<thead class="bg-slate-50"><tr>';
 
-            // === CỘT MỚI ===
             let orderedHeaders = [];
             let orderedIndices = [];
 
             if (isInvoiceTable) {
                 orderedHeaders = ['PHÒNG', 'THÀNH TIỀN', 'PHỤC VỤ', 'VÀO', 'RA'];
-                orderedIndices = [1, 4, 5, 2, 3]; // Phòng(1), Thành tiền(4), Phục vụ(5), Vào(2), Ra(3)
+                orderedIndices = [1, 4, 5, 2, 3];
             } else if (isSoNoTable) {
                 orderedHeaders = ['KHÁCH HÀNG', 'THÀNH TIỀN', 'CÒN NỢ', 'NGÀY'];
                 orderedIndices = [0, 2, 3, 1];
@@ -359,17 +537,14 @@
             }
 
             orderedHeaders.forEach(header => {
-                // Tối ưu 1: Đổi màu chữ header
                 html += `<th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">${header}</th>`;
             });
-            // Tối ưu 1: Đổi màu border
             html += '</tr></thead><tbody class="bg-white divide-y divide-slate-200">';
 
             dataBlock.rows.forEach(row => {
                 const detailString = isInvoiceTable ? row[row.length - 1] : '';
                 const staffCount = (detailString.match(/NV/g) || []).length;
                 const isClickable = isInvoiceTable && staffCount > 0;
-                // Tối ưu 4: Đổi màu hover của hàng
                 const trClass = isClickable ? 'cursor-pointer hover:bg-slate-50' : '';
                 const trOnclick = isClickable ? `onclick="showInvoiceDetailModal(this)"` : '';
 
@@ -381,23 +556,18 @@
                     let cell = row[idx] || '';
                     let displayCell = cell;
 
-                    // === CỘT PHỤC VỤ: CHỈ HIỆN SỐ NV (IN ĐẬM) ===
                     if (isInvoiceTable && i === 2) {
                         displayCell = staffCount > 0 ? `<strong>${staffCount} NV</strong>` : '---';
                     }
-                    // Định dạng giờ
-                    else if (!isNaN(cell) && cell > 40000 && cell.includes('.')) {
+                    else if (!isNaN(cell) && cell > 40000 && cell.toString().includes('.')) {
                         displayCell = convertExcelDate(cell);
                     }
-                    // Định dạng tiền
                     else if (!isNaN(cell) && parseFloat(cell) > 1000) {
                         displayCell = formatCurrency(cell);
                     }
-                    // Sổ nợ: định dạng ngày
                     else if (isSoNoTable && i === 3) {
                         displayCell = formatStringDateToDM(cell);
                     }
-                    // Tối ưu 1: Đổi màu chữ trong cell
                     html += `<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-800">${displayCell}</td>`;
                 });
 
@@ -422,7 +592,7 @@
                     labels: ['Tiền HĐ', 'Thực Đơn', 'Phụ Thu', 'Thực Thu'],
                     datasets: [
                         { label: data.thangTruoc.label.split('(')[0].trim(), data: data.thangTruoc.soLieu.map(Number), backgroundColor: 'rgba(251, 146, 60, 0.6)' },
-                        { label: data.thangNay.label.split('(')[0].trim(), data: data.thangNay.soLieu.map(Number), backgroundColor: 'rgba(79, 70, 229, 0.6)' } // Tối ưu: Đổi màu blue sang indigo
+                        { label: data.thangNay.label.split('(')[0].trim(), data: data.thangNay.soLieu.map(Number), backgroundColor: 'rgba(79, 70, 229, 0.6)' }
                     ]
                 },
                 options: {
@@ -440,18 +610,15 @@
             if (!dataNgay || dataNgay.length === 0) { if (card) card.style.display = 'none'; return; }
             if (card) card.style.display = 'block';
 
-            // Tối ưu 1: Đổi màu border
             let html = '<ul role="list" class="divide-y divide-slate-200">';
             let coDoanhThu = false;
             dataNgay.forEach((item, i) => {
                 const thucThu = parseFloat(item.soLieu[3]), phuThu = parseFloat(item.soLieu[2]);
                 if (thucThu > 0 || phuThu > 0) {
                     coDoanhThu = true;
-                    // Tối ưu 4: Đổi màu hover
                     html += `<li class="py-3 px-2 -mx-2 rounded-lg hover:bg-slate-50 cursor-pointer" onclick="showRevenueDetailModal(${i})">
                         <div class="flex justify-between items-center space-x-3">
                             <div class="flex-1 min-w-0">
-                                <!-- Tối ưu 1: Đổi màu chữ -->
                                 <p class="text-sm font-medium text-slate-900 truncate">${item.ngay}</p>
                                 <p class="text-xs text-slate-500">Phụ thu: ${formatCurrency(phuThu)}</p>
                             </div>
@@ -494,12 +661,10 @@
             if (!entries.length) return;
             const firstRoom = entries[0].split('*')[0] || "Chi Tiết";
             document.getElementById('modal-title').innerText = `Chi Tiết - ${firstRoom}`;
-            // Tối ưu 1: Đổi màu border
             let html = '<ul class="divide-y divide-slate-200 -mt-3">';
             entries.forEach(e => {
                 const p = e.split('*');
                 if (p.length < 6) return;
-                // Tối ưu 1: Đổi màu chữ
                 html += `<li class="py-3"><dl class="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
                     <dt class="font-medium text-slate-800">Nhân viên:</dt><dd class="text-slate-700 col-span-2">${p[1]}</dd>
                     <dt class="font-medium text-slate-800">Thời gian:</dt><dd class="text-slate-700 col-span-2">${convertExcelDate(p[2])} - ${convertExcelDate(p[3])} (${convertMinutesToHM(p[4])})</dd>
@@ -514,7 +679,6 @@
             const item = globalData.doanhThu.ngay[i];
             let html = '<dl class="space-y-3">';
             item.tieuDe.forEach((l, j) => {
-                // Tối ưu 1: Đổi màu chữ
                 html += `<div class="flex justify-between"><dt class="text-slate-600">${l}:</dt><dd class="font-semibold text-slate-900">${formatCurrency(item.soLieu[j])}</dd></div>`;
             });
             html += '</dl>';
@@ -528,16 +692,63 @@
             s = s.toLowerCase();
             if (s.includes('trống')) return 'bg-green-50 text-green-800 border-green-400';
             if (s.includes('có khách')) return 'bg-purple-100 text-purple-800 border-purple-400';
-            // Tối ưu 1: Đổi màu
             if (s.includes('chưa dọn')) return 'bg-slate-100 text-slate-700 border-slate-400';
             return 'bg-slate-50 text-slate-700 border-slate-200';
         }
 
-        function convertExcelDate(serial) {
-            if (isNaN(serial) || serial < 1) return '---';
+        // === HÀM MỚI: FORMAT THỜI GIAN (XỬ LÝ CẢ TEXT VÀ SERIAL) ===
+        function formatDateTime(value, fullDate = false) {
+            // Nếu là chuỗi text đã format sẵn (VD: "31/10/2025 23:14")
+            if (typeof value === 'string' && value.trim() !== '') {
+                // Kiểm tra xem có phải định dạng dd/MM/yyyy HH:mm không
+                if (value.match(/\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}/)) {
+                    return value; // Trả về nguyên text
+                }
+                // Nếu chỉ có giờ "14:30"
+                if (value.match(/^\d{1,2}:\d{2}$/)) {
+                    return value;
+                }
+            }
+            
+            // Nếu là số serial Excel, dùng hàm cũ
+            return convertExcelDate(value, fullDate);
+        }
+
+        function convertExcelDate(serial, fullDate = false) {
+            // Xử lý giá trị rỗng
+            if (!serial || serial === '' || serial === 0) return '---';
+            
+            // Xử lý chuỗi text (nếu có)
+            if (typeof serial === 'string') {
+                serial = parseFloat(serial);
+            }
+            
+            // Kiểm tra là số hợp lệ
+            if (isNaN(serial)) return '---';
+            
+            // Với Excel date serial phải > 0
+            if (serial < 0) return '---';
+            
+            // Chuyển đổi Excel serial sang Date
             const date = new Date((serial - 25569) * 86400000);
             const adj = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-            return adj.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(',', '');
+            
+            // Nếu yêu cầu full date hoặc serial < 1 (chỉ có giờ)
+            if (fullDate || serial < 1) {
+                return adj.toLocaleString('vi-VN', { 
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                }).replace(',', '');
+            }
+            
+            // Mặc định chỉ hiển thị giờ:phút
+            return adj.toLocaleString('vi-VN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }).replace(',', '');
         }
 
         function formatStringDateToDM(str) {
@@ -565,9 +776,15 @@
             } catch { return null; }
         }
 
-        function setCache(data, lastUpdated, a1) {
+        function setCache(data, lastUpdated, a1, vipRooms) {
             try {
-                localStorage.setItem(CACHE_KEY, JSON.stringify({ data, lastUpdated, a1, ts: Date.now() }));
+                localStorage.setItem(CACHE_KEY, JSON.stringify({ 
+                    data, 
+                    lastUpdated, 
+                    a1, 
+                    vipRooms, // ← LƯU VIP VÀO CACHE
+                    ts: Date.now() 
+                }));
             } catch (e) { console.error('Lỗi cache:', e); }
         }
 
