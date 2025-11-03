@@ -598,8 +598,10 @@
                     <div class="grid grid-cols-2 gap-3 text-sm">
                          <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Số HĐ</span><strong class="text-indigo-700">${rowData[0]}</strong></div>
                         <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Phòng</span><strong class="text-indigo-700">${rowData[1]}</strong></div>
-                        <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ vào</span><strong class="text-indigo-700">${convertExcelDate(rowData[2])}</strong></div>
-                         <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ ra</span><strong class="text-indigo-700">${convertExcelDate(rowData[3])}</strong></div>
+                        <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ vào</span><strong class="text-indigo-700">${formatDateTime(rowData[2])}</strong></div>
+                        <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ ra</span><strong class="text-indigo-700">${formatDateTime(rowData[3])}</strong></div>
+...
+
                         <div class="bg-white rounded p-2 col-span-2"><span class="text-slate-600 text-xs block">Thành tiền HĐ</span><strong class="text-2xl text-green-600">${formatCurrency(rowData[4])}</strong></div>
                     </div>
                 </div>`;
