@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Báo Cáo Online</title>
+    <title>Báo Cáo Online (v18.1 - Print)</title>
     <link rel="preconnect" href="https://script.google.com">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         #detail-modal { transition: opacity 0.3s ease; }
@@ -17,36 +18,94 @@
         #refresh-button.disabled { opacity: 0.5; background-color: #555; cursor: not-allowed; transform: scale(0.95); }
         #refresh-icon { transition: transform 0.5s ease; }
         #refresh-button.loading #refresh-icon { transform: rotate(360deg); }
-        .vip-clickable { 
-            color: #2563eb; 
-            text-decoration: underline; 
-            cursor: pointer; 
-            font-weight: 600;
-            transition: all 0.2s;
+        .vip-clickable { color: #2563eb; text-decoration: underline; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .vip-clickable:hover { color: #1d4ed8; text-decoration: none; transform: scale(1.05); }
+        .general-clickable { cursor: pointer; }
+        .general-clickable:hover { background-color: #f9fafb; }
+
+        /* === THÊM MỚI: CSS cho hóa đơn K58 === */
+        .k58-receipt {
+            display: none; /* Ẩn mặc định */
+            width: 58mm;
+            font-family: 'Arial', sans-serif; /* Dùng font cơ bản để in */
+            font-size: 10pt;
+            color: #000;
+            background: #fff;
+            padding: 3mm;
+            box-sizing: border-box;
         }
-        .vip-clickable:hover { 
-            color: #1d4ed8; 
-            text-decoration: none;
-            transform: scale(1.05);
+        .k58-receipt .header { text-align: center; margin-bottom: 5mm; }
+        .k58-receipt .header h1 { font-size: 14pt; font-weight: bold; margin: 0; }
+        .k58-receipt .header p { margin: 0; font-size: 9pt; }
+        .k58-receipt .info { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 2mm 0; margin-bottom: 2mm; font-size: 10pt; }
+        .k58-receipt .info table { width: 100%; }
+        .k58-receipt .items-table { width: 100%; margin-bottom: 2mm; }
+        .k58-receipt .items-table th { text-align: left; border-bottom: 1px solid #000; font-size: 9pt; padding-bottom: 1mm; }
+        .k58-receipt .items-table td { padding: 1mm 0; vertical-align: top; }
+        .k58-receipt .items-table .col-sl { text-align: center; }
+        .k58-receipt .items-table .col-tien { text-align: right; }
+        .k58-receipt .summary { margin-top: 3mm; padding-top: 2mm; border-top: 1px dashed #000; }
+        .k58-receipt .summary table { width: 100%; font-size: 11pt; }
+        .k58-receipt .summary table td:first-child { text-align: right; font-weight: 600; padding-right: 2mm; }
+        .k58-receipt .summary table td:last-child { text-align: right; font-weight: 600; }
+        .k58-receipt .summary .total { font-size: 14pt; font-weight: bold; }
+        .k58-receipt .footer { text-align: center; margin-top: 5mm; font-size: 9pt; }
+        .k58-receipt .print-hide { display: none; } /* Ẩn các nút khi in */
+        .k58-receipt .section-header {
+            font-weight: bold;
+            font-size: 11pt; /* To hơn 10pt một chút */
+            margin-top: 3mm;
+            margin-bottom: 1mm;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 1mm;
+        }
+
+        /* === THÊM MỚI: CSS @media print === */
+        @media print {
+            body * {
+                visibility: hidden; /* Ẩn tất cả mọi thứ */
+            }
+            .k58-receipt, .k58-receipt * {
+                visibility: visible; /* Chỉ hiện hóa đơn */
+            }
+            .k58-receipt {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 58mm;
+                margin: 0;
+                padding: 0;
+                font-size: 10pt;
+            }
+            @page {
+                size: 58mm auto; /* Đặt kích thước giấy */
+                margin: 2mm;
+            }
         }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
 
-    <!-- MODAL CHUNG -->
     <div id="detail-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-75 flex items-center justify-center z-50 p-4" onclick="closeModal()">
-        <div id="modal-panel" class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
+        <div id="modal-panel" class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
+            
+            <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center rounded-t-xl z-10">
                 <h3 id="modal-title" class="text-xl font-semibold text-slate-900">Chi Tiết</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div id="modal-content" class="p-6"></div>
+            
+            <div id="modal-content" class="p-6 overflow-y-auto">
+                </div>
+
+            <div id="modal-footer" class="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-end items-center space-x-3 rounded-b-xl z-10">
+                </div>
+
         </div>
     </div>
 
-    <!-- REFRESH BUTTON -->
     <button id="refresh-button" onclick="forceFetchData()" class="fixed bottom-6 right-6 z-40 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 active:scale-95">
         <svg id="refresh-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.183m-4.992 0v4.992" />
@@ -55,7 +114,6 @@
     <div id="refresh-toast" class="hidden fixed bottom-24 right-6 z-40 bg-slate-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
         Đã cập nhật dữ liệu mới!
     </div>
-
     <div class="container mx-auto p-4 md:p-8">
         <div id="page-loader" class="flex flex-col items-center justify-center min-h-screen">
             <svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -64,96 +122,68 @@
             </svg>
             <span class="text-lg text-slate-700 mt-4 animate-pulse">Đang tải dữ liệu báo cáo...</span>
         </div>
-
         <div id="dashboard" class="hidden">
             <h1 class="text-4xl font-bold tracking-tight text-center text-slate-900 mb-4">Báo Cáo Tổng Hợp</h1>
-
             <div id="update-info" class="hidden text-center text-sm text-slate-600 mb-6">
-                <span id="update-time">Đang tải...</span>
+                 <span id="update-time">Đang tải...</span>
             </div>
-
             <div id="data-error-banner" class="hidden mb-6 p-5 bg-red-100 border-l-4 border-red-500 text-red-800 rounded-lg shadow-md">
                 <h4 class="font-bold text-lg">Không thể tải dữ liệu!</h4>
                 <p class="mt-3 font-mono text-sm bg-red-50 p-2 rounded" id="fetch-error-details"></p>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-
-                <!-- 1. TÌNH TRẠNG HOẠT ĐỘNG -->
                 <div class="lg:col-span-2 2xl:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <h3 class="text-xl font-semibold text-slate-900">Tình Trạng Hoạt Động</h3>
                     <div class="mt-4 pt-4 border-t border-slate-200">
-                        <div id="trang-thai-thong-ke" class="space-y-3 mb-5"></div>
+                         <div id="trang-thai-thong-ke" class="space-y-3 mb-5"></div>
                         <div id="trang-thai-bang" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
                     </div>
                 </div>
-
-                <!-- 2. HÓA ĐƠN HÔM NAY -->
-                <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
+                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Nay</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div id="hd-hom-nay-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
-                        <small id="time-hom-nay" class="text-slate-500 text-xs block mb-2"></small>
                         <div id="hd-hom-nay-bang"></div>
                     </div>
-                </div>
-
-                <!-- 3. HÓA ĐƠN HÔM QUA -->
+                 </div>
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Hóa Đơn Hôm Qua</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
+                         <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div id="hd-hom-qua-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
-                        <small id="time-hom-qua" class="text-slate-500 text-xs block mb-2"></small>
                         <div id="hd-hom-qua-bang"></div>
-                    </div>
+                     </div>
                 </div>
-
-                <!-- 4. SỔ NỢ -->
                 <div class="lg:col-span-2 2xl:col-span-1 bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
-                        <h3 class="text-xl font-semibold text-slate-900">Sổ Nợ</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
+                         <h3 class="text-xl font-semibold text-slate-900">Sổ Nợ</h3>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div id="so-no-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
-                        <div id="so-no-bang"></div>
+                         <div id="so-no-bang"></div>
                     </div>
                 </div>
-
-                <!-- 5. DOANH THU 7 NGÀY -->
                 <div class="bg-white rounded-xl shadow-lg p-6">
                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Doanh Thu 7 Ngày</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="doanh-thu-7-ngay-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
+                     <div id="doanh-thu-7-ngay-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
                         <div id="doanh-thu-7-ngay-bang" class="space-y-1"></div>
                     </div>
                 </div>
-
-                <!-- 6. BIỂU ĐỒ -->
                 <div class="bg-white rounded-xl shadow-lg p-6">
-                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
+                     <div class="flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this)">
                         <h3 class="text-xl font-semibold text-slate-900">Doanh Thu Tháng (So Sánh)</h3>
-                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </div>
+                        <svg class="chevron w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                     </div>
                     <div id="revenue-chart-content" class="mt-4 pt-4 border-t border-slate-200 hidden">
                         <div class="h-80">
                             <canvas id="revenue-chart"></canvas>
-                        </div>
+                         </div>
                     </div>
                 </div>
             </div>
@@ -161,100 +191,71 @@
     </div>
 
     <script>
-        // === CÀI ĐẶT ===
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx2mALDtcjCvxDzC70bk8uv46KaPM6bmyaw_bLcFPyFnV1qgiASGKDITBi24gapB8um/exec?';
-        const CACHE_KEY = 'BaoCaoCache_v11';
+        // === CÀI ĐẶT (Giữ nguyên) ===
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzCXVlSPHh_ECB-uCZGaY4AxLKHYqCnJlu2l9MQoFBm5uavHqjyKUwepBv__TY2Kx_y/exec?'; // <-- URL GAS CỦA BẠN
+        const CACHE_KEY = 'BaoCaoCache_v13'; 
         const CACHE_TTL = 24 * 60 * 60 * 1000;
-        
         let globalData = {};
-        let vipRoomsData = {}; // ← LƯU DỮ LIỆU VIP
+        let vipRoomsData = {};
         let chartInstance = null;
-
         const pageLoader = document.getElementById('page-loader');
         const dashboard = document.getElementById('dashboard');
         const errorBanner = document.getElementById('data-error-banner');
         const errorDetails = document.getElementById('fetch-error-details');
         const refreshButton = document.getElementById('refresh-button');
         const refreshToast = document.getElementById('refresh-toast');
-
-        // === HIỂN THỊ "BÁO CÁO TẠO LÚC" ===
+        
+        // === TẢI DỮ LIỆU & RENDER (Giữ nguyên) ===
         function updateInfo(obj) {
             const a1Raw = (obj.a1 || '').replace(/^\uFEFF/, '').trim();
-            if (!a1Raw) {
-                document.getElementById('update-info').classList.add('hidden');
-                return;
-            }
+            if (!a1Raw) { document.getElementById('update-info').classList.add('hidden'); return; }
             const match = a1Raw.match(/(\d{2}\/\d{2}\/\d{4}) (\d{2}:\d{2})/);
             const a1Str = match ? `${match[1]} ${match[2]}` : a1Raw;
-            const el = document.getElementById('update-time');
-            el.innerHTML = `<strong>Báo cáo tạo lúc:</strong> ${a1Str}`;
+            document.getElementById('update-time').innerHTML = `<strong>Báo cáo tạo lúc:</strong> ${a1Str}`;
             document.getElementById('update-info').classList.remove('hidden');
         }
-
-        // === TẢI DỮ LIỆU ===
         window.addEventListener('DOMContentLoaded', () => {
             const cached = getCache();
             if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
                 globalData = cached.data;
-                vipRoomsData = cached.vipRooms || {}; // ← KHÔI PHỤC VIP DATA
+                vipRoomsData = cached.vipRooms || {}; 
                 renderLight();
                 setTimeout(renderHeavy, 100);
                 updateInfo(cached);
                 fetchData(false);
-            } else {
-                fetchData(false);
-            }
+            } else { fetchData(false); }
         });
-
         function fetchData(force = false) {
             const url = GAS_WEB_APP_URL + '&t=' + Date.now() + (force ? '&force=true' : '');
             setLoading(force);
-
-            fetch(url)
-                .then(r => r.json())
-                .then(res => {
-                    if (res.status !== 'success') throw new Error(res.message || 'Lỗi server');
-                    
-                    updateInfo(res);
-                    document.getElementById('time-hom-nay').textContent = res.thoiGianHomNay || '';
-                    document.getElementById('time-hom-qua').textContent = res.thoiGianHomQua || '';
-
-                    // ← LƯU DỮ LIỆU VIP
-                    vipRoomsData = res.vipRooms || {};
-                    console.log('✅ VIP Data loaded:', vipRoomsData);
-
-                    const cached = getCache();
-                    if (!cached || cached.lastUpdated !== res.lastUpdated) {
-                        globalData = res.data;
-                        setCache(res.data, res.lastUpdated, res.a1, res.vipRooms); // ← LƯU VÀO CACHE
-                        renderDashboard(false);
-                        if (force) showToast('Cập nhật thành công!');
-                    } else if (force) {
-                        showToast('Dữ liệu không thay đổi');
-                    }
-                    hideLoader();
-                })
-                .catch(err => {
-                    console.error('Lỗi tải dữ liệu:', err);
-                    errorDetails.textContent = err.message;
-                    errorBanner.classList.remove('hidden');
-                    if (getCache()) renderDashboard(true);
-                    hideLoader();
-                })
-                .finally(() => setLoading(false));
+            fetch(url).then(r => r.json()).then(res => {
+                if (res.status !== 'success') throw new Error(res.message || 'Lỗi server');
+                updateInfo(res);
+                vipRoomsData = res.vipRooms || {};
+                const cached = getCache();
+                if (!cached || cached.lastUpdated !== res.lastUpdated) {
+                    globalData = res.data;
+                    setCache(res.data, res.lastUpdated, res.a1, res.vipRooms);
+                    renderDashboard(false);
+                    if (force) showToast('Cập nhật thành công!');
+                 } else if (force) { showToast('Dữ liệu không thay đổi'); }
+                hideLoader();
+            }).catch(err => {
+                console.error('Lỗi tải dữ liệu:', err);
+                errorDetails.textContent = err.message;
+                 errorBanner.classList.remove('hidden');
+                if (getCache()) renderDashboard(true);
+                hideLoader();
+            }).finally(() => setLoading(false));
         }
-
         function forceFetchData() {
             if (refreshButton.disabled) return;
             fetchData(true);
         }
-
-        // === RENDER ===
         function renderLight() {
             if (globalData.trangThaiPhong) renderTrangThaiPhong(globalData.trangThaiPhong);
             hideLoader();
         }
-
         function renderHeavy() {
             if (globalData.doanhThu) renderDoanhThuChart(globalData.doanhThu);
             if (globalData.doanhThu?.ngay) renderDoanhThu7Ngay(globalData.doanhThu.ngay);
@@ -262,256 +263,53 @@
             renderTable(globalData.hdHomQua, 'hd-hom-qua-bang', 'Không có hóa đơn hôm qua');
             renderTable(globalData.soNo, 'so-no-bang', 'Không có sổ nợ');
         }
-
         function renderDashboard(lazy = false) {
             renderLight();
             if (lazy) setTimeout(renderHeavy, 150);
             else renderHeavy();
         }
-
-        // === RENDER TÌNH TRẠNG PHÒNG (CÓ VIP CLICKABLE) ===
-function renderTrangThaiPhong(data) {
-    const thongKeDiv = document.getElementById('trang-thai-thong-ke');
-
-    // Hiển thị thống kê
-    const thongKeText = data.thongKe.homNay;
-    thongKeDiv.innerHTML = `<div class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 font-medium">${thongKeText}</div>`;
-    // Hiển thị các phòng
-    const container = document.getElementById('trang-thai-bang');
-    if (!data.rooms || data.rooms.length === 0) {
-        container.innerHTML = `<p class="text-sm text-slate-500 italic">Không có dữ liệu phòng.</p>`;
-        return;
-    }
-
-    let html = '';
-    data.rooms.forEach(room => {
-        const [tenPhong, trangThai, gioVaoSerial, ghiChu] = room;
-        const colorClasses = getTrangThaiClasses(trangThai);
-        const gioVaoDisplay = (trangThai.toLowerCase().includes('có khách') || trangThai.toLowerCase().includes('chưa dọn')) 
-            ? convertExcelDate(gioVaoSerial) : '';
-
-        // Kiểm tra tên phòng có chứa "VIP 1", "VIP 2", "VIP 3" để thêm onclick showVIPDetail tương ứng
-        let onclickAttr = '';
-        if (/VIP\s*1/i.test(tenPhong)) {
-            onclickAttr = `onclick="showVIPDetail('VIP 1')" style="cursor:pointer"`;
-        } else if (/VIP\s*2/i.test(tenPhong)) {
-            onclickAttr = `onclick="showVIPDetail('VIP 2')" style="cursor:pointer"`;
-        } else if (/VIP\s*3/i.test(tenPhong)) {
-            onclickAttr = `onclick="showVIPDetail('VIP 3')" style="cursor:pointer"`;
-        }
-
-        html += `
-            <div class="p-3.5 rounded-lg border ${colorClasses} shadow-sm space-y-1 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200" ${onclickAttr}>
-                <div class="flex justify-between items-start">
-                    <span class="font-bold text-lg">${tenPhong}</span>
-                    <span class="font-semibold text-xs px-2 py-0.5 rounded-full ${colorClasses}">${trangThai}</span>
-                </div>
-                <div class="text-sm space-y-0.5">
-                    <p><strong>Giờ:</strong> ${gioVaoDisplay || '---'}</p>
-                    <p class="text-xs"><strong>Note:</strong> ${ghiChu || '---'}</p>
-                </div>
-            </div>`;
-    });
-    container.innerHTML = html;
-}
-
-        // === HÀM MỚI: HIỂN THỊ MODAL CHI TIẾT VIP ===
-        function showVIPDetail(vipName) {
-            console.log('🔍 Tìm VIP:', vipName);
-            console.log('📦 VIP Data available:', Object.keys(vipRoomsData));
-            
-            // Normalize tên (xử lý "VIP 1" vs "VIP1")
-            const normalizedName = vipName.replace(/\s+/g, ' ').trim();
-            let vipData = vipRoomsData[normalizedName];
-            
-            // Thử tìm với các variant
-            if (!vipData) {
-                const variants = [
-                    normalizedName.replace(/\s/g, ''),  // "VIP1"
-                    normalizedName.toUpperCase(),        // "VIP 1"
-                    normalizedName.toLowerCase()         // "vip 1"
-                ];
-                
-                for (const variant of variants) {
-                    vipData = vipRoomsData[variant];
-                    if (vipData) {
-                        console.log('✅ Tìm thấy với variant:', variant);
-                        break;
-                    }
-                }
-            }
-            
-            if (!vipData) {
-                console.error('❌ Không tìm thấy dữ liệu cho:', vipName);
-                alert(`Không có dữ liệu chi tiết cho ${vipName}`);
+        function renderTrangThaiPhong(data) {
+            const thongKeDiv = document.getElementById('trang-thai-thong-ke');
+            thongKeDiv.innerHTML = `<div class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 font-medium">${data.thongKe.homNay}</div>`;
+            const container = document.getElementById('trang-thai-bang');
+            if (!data.rooms || data.rooms.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-500 italic">Không có dữ liệu phòng.</p>`;
                 return;
             }
-
-            document.getElementById('modal-title').innerText = `Chi Tiết - ${vipName}`;
-            
-            let html = '<div class="space-y-6">';
-            
-            // 1. THÔNG TIN CHUNG
-            html += `
-                <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200">
-                    <h4 class="font-semibold text-indigo-900 mb-3 text-lg flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Thông Tin Chung
-                    </h4>
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                        <div class="bg-white rounded p-2">
-                            <span class="text-slate-600 text-xs block">Giờ vào</span>
-                            <strong class="text-indigo-700">${formatDateTime(vipData.gioVao, true)}</strong>
-                        </div>
-                        <div class="bg-white rounded p-2">
-                            <span class="text-slate-600 text-xs block">Giờ ra</span>
-                            <strong class="text-indigo-700">${formatDateTime(vipData.gioRa, true)}</strong>
-                        </div>
-                        <div class="bg-white rounded p-2">
-                            <span class="text-slate-600 text-xs block">Chính sách</span>
-                            <strong class="text-green-600">${vipData.chinhSach || '---'}</strong>
-                        </div>
-                        <div class="bg-white rounded p-2">
-                            <span class="text-slate-600 text-xs block">Số NV</span>
-                            <strong class="text-blue-600">${vipData.soNhanVien} người</strong>
-                        </div>
-                    </div>
-                </div>`;
-            
-            // 2. THỰC ĐƠN
-            if (vipData.thucDon && vipData.thucDon.length > 0) {
+            let html = '';
+            data.rooms.forEach(room => {
+                const [tenPhong, trangThai, gioVaoSerial, ghiChu] = room;
+                const colorClasses = getTrangThaiClasses(trangThai);
+                const gioVaoDisplay = (trangThai.toLowerCase().includes('có khách') || trangThai.toLowerCase().includes('chưa dọn')) ? convertExcelDate(gioVaoSerial) : '';
+                let onclickAttr = '';
+                 if (/VIP\s*1/i.test(tenPhong)) onclickAttr = `onclick="showVIPDetail('VIP 1')" style="cursor:pointer"`;
+                else if (/VIP\s*2/i.test(tenPhong)) onclickAttr = `onclick="showVIPDetail('VIP 2')" style="cursor:pointer"`;
+                else if (/VIP\s*3/i.test(tenPhong)) onclickAttr = `onclick="showVIPDetail('VIP 3')" style="cursor:pointer"`;
                 html += `
-                    <div>
-                        <h4 class="font-semibold text-slate-900 mb-3 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                            </svg>
-                            Thực Đơn (${vipData.thucDon.length} món)
-                        </h4>
-                        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                            <table class="min-w-full divide-y divide-slate-200">
-                                <thead class="bg-orange-50">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-slate-700 uppercase">Món</th>
-                                        <th class="px-4 py-2 text-center text-xs font-medium text-slate-700 uppercase">SL</th>
-                                        <th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Đơn giá</th>
-                                        <th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Thành tiền</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">`;
-                
-                vipData.thucDon.forEach(mon => {
-                    html += `
-                        <tr class="hover:bg-orange-50 transition-colors">
-                            <td class="px-4 py-2 text-sm text-slate-800">${mon.ten}</td>
-                            <td class="px-4 py-2 text-sm text-center font-medium text-slate-700">${mon.soLuong}</td>
-                            <td class="px-4 py-2 text-sm text-right text-slate-600">${formatCurrency(mon.donGia)}</td>
-                            <td class="px-4 py-2 text-sm text-right font-semibold text-slate-900">${formatCurrency(mon.thanhTien)}</td>
-                        </tr>`;
-                });
-                
-                html += `
-                                </tbody>
-                                <tfoot class="bg-orange-50 border-t-2 border-orange-200">
-                                    <tr>
-                                        <td colspan="3" class="px-4 py-3 text-sm font-bold text-slate-700 text-right">Tổng thực đơn:</td>
-                                        <td class="px-4 py-3 text-base font-bold text-orange-600 text-right">${formatCurrency(vipData.tongThucDon)}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                    <div class="p-3.5 rounded-lg border ${colorClasses} shadow-sm space-y-1 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200" ${onclickAttr}>
+                        <div class="flex justify-between items-start"><span class="font-bold text-lg">${tenPhong}</span><span class="font-semibold text-xs px-2 py-0.5 rounded-full ${colorClasses}">${trangThai}</span></div>
+                        <div class="text-sm space-y-0.5"><p><strong>Giờ:</strong> ${gioVaoDisplay || '---'}</p><p class="text-xs"><strong>Note:</strong> ${ghiChu || '---'}</p></div>
                     </div>`;
-            } else {
-                html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Chưa có thực đơn</div>`;
-            }
-            
-            // 3. NHÂN VIÊN
-            if (vipData.nhanVien && vipData.nhanVien.length > 0) {
-                html += `
-                    <div>
-                        <h4 class="font-semibold text-slate-900 mb-3 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                            </svg>
-                            Nhân Viên Phục Vụ (${vipData.soNhanVien})
-                        </h4>
-                        <div class="space-y-3">`;
-                
-                vipData.nhanVien.forEach((nv, idx) => {
-                    html += `
-                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <span class="font-semibold text-slate-900 text-base">${idx + 1}. ${nv.ten}</span>
-                                    <p class="text-xs text-slate-600 mt-1">
-                                        <strong>Thời gian:</strong> ${formatDateTime(nv.gioVao)} → ${formatDateTime(nv.gioRa)}
-                                    </p>
-                                    <p class="text-xs text-slate-600">
-                                        <strong>Tổng:</strong> ${convertMinutesToHM(nv.tongPhut)}
-                                    </p>
-                                </div>
-                                <span class="font-bold text-lg text-blue-700">${formatCurrency(nv.thanhTien)}</span>
-                            </div>
-                        </div>`;
-                });
-                
-                html += `
-                        </div>
-                        <div class="mt-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-4 border-2 border-blue-300">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-slate-800 text-lg">Tổng tiền nhân viên:</span>
-                                <span class="font-bold text-blue-700 text-2xl">${formatCurrency(vipData.tongNhanVien)}</span>
-                            </div>
-                        </div>
-                    </div>`;
-            } else {
-                html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Chưa có nhân viên phục vụ</div>`;
-            }
-            
-            // 4. TỔNG KẾT
-            const tongCong = (vipData.tongThucDon || 0) + (vipData.tongNhanVien || 0);
-            html += `
-                <div class="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-5 border-2 border-green-400">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-slate-900 text-xl">TỔNG CỘNG:</span>
-                        <span class="font-bold text-green-700 text-3xl">${formatCurrency(tongCong)}</span>
-                    </div>
-                    <div class="mt-2 text-sm text-slate-600 flex justify-between">
-                        <span>Thực đơn: ${formatCurrency(vipData.tongThucDon)}</span>
-                        <span>Nhân viên: ${formatCurrency(vipData.tongNhanVien)}</span>
-                    </div>
-                </div>`;
-            
-            html += '</div>';
-            
-            document.getElementById('modal-content').innerHTML = html;
-            openModal();
+            });
+            container.innerHTML = html;
         }
 
-        // === RENDER BẢNG ===
+
+        // === CẬP NHẬT RENDER BẢNG (V18 - Giữ nguyên) ===
         function renderTable(dataBlock, elementId, emptyMessage) {
             const container = document.getElementById(elementId);
             if (!container) return;
-
             const card = container.closest('.bg-white');
             if (!card) return;
-
             if (!dataBlock || !dataBlock.rows || dataBlock.rows.length === 0) {
-                if (elementId !== 'hd-hom-nay-bang') {
-                    card.style.display = 'none';
-                } else {
-                    container.innerHTML = `<p class="text-sm text-slate-500 italic">${emptyMessage}</p>`;
-                }
+                if (elementId !== 'hd-hom-nay-bang') card.style.display = 'none';
+                else container.innerHTML = `<p class="text-sm text-slate-500 italic">${emptyMessage}</p>`;
                 return;
             }
 
             card.style.display = 'block';
-
             const isInvoiceTable = (elementId === 'hd-hom-nay-bang' || elementId === 'hd-hom-qua-bang');
             const isSoNoTable = (elementId === 'so-no-bang');
-
             let html = '<div class="flex flex-col"><div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">';
             html += '<div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">';
             html += '<div class="shadow-sm ring-1 ring-black ring-opacity-5 overflow-hidden border-b border-slate-200 sm:rounded-lg">';
@@ -520,10 +318,9 @@ function renderTrangThaiPhong(data) {
 
             let orderedHeaders = [];
             let orderedIndices = [];
-
             if (isInvoiceTable) {
-                orderedHeaders = ['PHÒNG', 'THÀNH TIỀN', 'PHỤC VỤ', 'VÀO', 'RA'];
-                orderedIndices = [1, 4, 5, 2, 3];
+                orderedHeaders = ['PHÒNG', 'THÀNH TIỀN', 'THỰC ĐƠN', 'PHỤC VỤ', 'VÀO', 'RA'];
+                orderedIndices = [1, 4, 5, 6, 2, 3];
             } else if (isSoNoTable) {
                 orderedHeaders = ['KHÁCH HÀNG', 'THÀNH TIỀN', 'CÒN NỢ', 'NGÀY'];
                 orderedIndices = [0, 2, 3, 1];
@@ -538,47 +335,63 @@ function renderTrangThaiPhong(data) {
             html += '</tr></thead><tbody class="bg-white divide-y divide-slate-200">';
 
             dataBlock.rows.forEach(row => {
-                const detailString = isInvoiceTable ? row[row.length - 1] : '';
-                const staffCount = (detailString.match(/NV/g) || []).length;
-                const isClickable = isInvoiceTable && staffCount > 0;
-                const trClass = isClickable ? 'cursor-pointer hover:bg-slate-50' : '';
-                const trOnclick = isClickable ? `onclick="showInvoiceDetailModal(this)"` : '';
-
-                html += `<tr class="${trClass}" ${trOnclick}>`;
-
+                html += `<tr>`; 
                 orderedIndices.forEach((idx, i) => {
-                    if (isInvoiceTable && idx === 0) return;
-
-                    let cell = row[idx] || '';
+                    if (isInvoiceTable && idx === 0) return; // Bỏ qua cột HĐ
+                     let cell = row[idx] || '';
                     let displayCell = cell;
-
-                    if (isInvoiceTable && i === 2) {
-                        displayCell = staffCount > 0 ? `<strong>${staffCount} NV</strong>` : '---';
+                    let tdClass = 'px-4 py-3 whitespace-nowrap text-sm text-slate-800';
+                    let tdOnclick = '';
+                     if (isInvoiceTable && i === 2) { 
+                        const menuItems = (cell && cell.includes('*')) ? cell.split(';').filter(Boolean).length : 0;
+                        if (menuItems > 0) {
+                             displayCell = `<span class="vip-clickable">${menuItems} món</span>`;
+                            tdOnclick = `onclick="showMenuDetailModal(this, event)"`;
+                        } else {
+                             displayCell = '---';
+                            tdClass += ' general-clickable';
+                            tdOnclick = `onclick="showCombinedDetailModal(this, event)"`;
+                        }
                     }
-                    else if (!isNaN(cell) && cell > 40000 && cell.toString().includes('.')) {
-                        displayCell = convertExcelDate(cell);
+                    else if (isInvoiceTable && i === 3) { 
+                        const staffCount = (cell.match(/NV/g) || []).length;
+                        if (staffCount > 0) {
+                            displayCell = `<strong class="vip-clickable">${staffCount} NV</strong>`;
+                            tdOnclick = `onclick="showStaffDetailModal(this, event)"`; 
+                        } else {
+                            displayCell = '---';
+                            tdClass += ' general-clickable';
+                            tdOnclick = `onclick="showCombinedDetailModal(this, event)"`;
+                        }
                     }
-                    else if (!isNaN(cell) && parseFloat(cell) > 1000) {
-                        displayCell = formatCurrency(cell);
+                    else if (isInvoiceTable) { 
+                        tdClass += ' general-clickable';
+                        tdOnclick = `onclick="showCombinedDetailModal(this, event)"`;                         
+                        if (!isNaN(cell) && cell > 40000 && cell.toString().includes('.')) {
+                            displayCell = convertExcelDate(cell);
+                        } else if (!isNaN(cell) && parseFloat(cell) > 1000) {
+                            displayCell = formatCurrency(cell);
+                        }
                     }
-                    else if (isSoNoTable && i === 3) {
+                    else if (isSoNoTable && i === 3) { 
                         displayCell = formatStringDateToDM(cell);
                     }
-                    html += `<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-800">${displayCell}</td>`;
+                    
+                    html += `<td class="${tdClass}" ${tdOnclick}>${displayCell}</td>`;
                 });
 
                 if (isInvoiceTable) {
-                    html += `<td class="hidden" data-role="detail">${detailString}</td>`;
+                    html += `<td class="hidden" data-role="detail">${row[6]}</td>`; 
+                    html += `<td class="hidden" data-role="menu">${row[5]}</td>`; 
+                    html += `<td class="hidden" data-role="raw-data">${JSON.stringify(row)}</td>`;
                 }
-
                 html += '</tr>';
             });
-
             html += '</tbody></table></div></div></div></div>';
             container.innerHTML = html;
         }
 
-        // === BIỂU ĐỒ ===
+        // === BIỂU ĐỒ & DOANH THU 7 NGÀY (Giữ nguyên) ===
         function renderDoanhThuChart(data) {
             if (chartInstance) chartInstance.destroy();
             const ctx = document.getElementById('revenue-chart').getContext('2d');
@@ -587,25 +400,22 @@ function renderTrangThaiPhong(data) {
                 data: {
                     labels: ['Tiền HĐ', 'Thực Đơn', 'Phụ Thu', 'Thực Thu'],
                     datasets: [
-                        { label: data.thangTruoc.label.split('(')[0].trim(), data: data.thangTruoc.soLieu.map(Number), backgroundColor: 'rgba(251, 146, 60, 0.6)' },
+                         { label: data.thangTruoc.label.split('(')[0].trim(), data: data.thangTruoc.soLieu.map(Number), backgroundColor: 'rgba(251, 146, 60, 0.6)' },
                         { label: data.thangNay.label.split('(')[0].trim(), data: data.thangNay.soLieu.map(Number), backgroundColor: 'rgba(79, 70, 229, 0.6)' }
                     ]
                 },
-                options: {
+                 options: {
                     responsive: true, maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true, ticks: { callback: v => formatCurrency(v) } } },
                     plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': ' + formatCurrency(c.parsed.y) } } }
                 }
             });
         }
-
-        // === DOANH THU 7 NGÀY ===
         function renderDoanhThu7Ngay(dataNgay) {
             const container = document.getElementById('doanh-thu-7-ngay-bang');
             const card = container.closest('.bg-white');
             if (!dataNgay || dataNgay.length === 0) { if (card) card.style.display = 'none'; return; }
             if (card) card.style.display = 'block';
-
             let html = '<ul role="list" class="divide-y divide-slate-200">';
             let coDoanhThu = false;
             dataNgay.forEach((item, i) => {
@@ -613,14 +423,7 @@ function renderTrangThaiPhong(data) {
                 if (thucThu > 0 || phuThu > 0) {
                     coDoanhThu = true;
                     html += `<li class="py-3 px-2 -mx-2 rounded-lg hover:bg-slate-50 cursor-pointer" onclick="showRevenueDetailModal(${i})">
-                        <div class="flex justify-between items-center space-x-3">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-slate-900 truncate">${item.ngay}</p>
-                                <p class="text-xs text-slate-500">Phụ thu: ${formatCurrency(phuThu)}</p>
-                            </div>
-                            <div class="text-base font-semibold text-green-700">${formatCurrency(thucThu)}</div>
-                        </div>
-                    </li>`;
+                        <div class="flex justify-between items-center space-x-3"><div class="flex-1 min-w-0"><p class="text-sm font-medium text-slate-900 truncate">${item.ngay}</p><p class="text-xs text-slate-500">Phụ thu: ${formatCurrency(phuThu)}</p></div><div class="text-base font-semibold text-green-700">${formatCurrency(thucThu)}</div></div></li>`;
                 }
             });
             if (!coDoanhThu && card) card.style.display = 'none';
@@ -628,49 +431,35 @@ function renderTrangThaiPhong(data) {
             container.innerHTML = html;
         }
 
-        // === MODAL ===
+        // === CÁC HÀM MODAL (Cập nhật) ===
         function toggleCollapse(el) {
             const content = el.nextElementSibling;
             const icon = el.querySelector('.chevron');
             content.classList.toggle('hidden');
             icon.classList.toggle('chevron-rotated');
         }
-
         function openModal() {
             const modal = document.getElementById('detail-modal');
             const panel = document.getElementById('modal-panel');
             modal.classList.remove('hidden'); modal.classList.add('flex');
             setTimeout(() => { modal.classList.add('opacity-100'); panel.classList.add('scale-100'); }, 10);
         }
-
+        
+        // === CẬP NHẬT: Hàm closeModal ===
         function closeModal() {
             const modal = document.getElementById('detail-modal');
             const panel = document.getElementById('modal-panel');
             modal.classList.remove('opacity-100'); panel.classList.remove('scale-100');
-            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+            setTimeout(() => { 
+                modal.classList.add('hidden'); 
+                modal.classList.remove('flex'); 
+                // Dọn dẹp nội dung modal
+                document.getElementById('modal-content').innerHTML = '';
+                document.getElementById('modal-title').innerText = 'Chi Tiết';
+                document.getElementById('modal-footer').innerHTML = ''; // <-- Dọn dẹp footer
+            }, 300);
         }
-
-        function showInvoiceDetailModal(row) {
-            const detail = row.querySelector('td[data-role="detail"]');
-            if (!detail || !detail.innerText) return;
-            const entries = detail.innerText.split(';').filter(Boolean);
-            if (!entries.length) return;
-            const firstRoom = entries[0].split('*')[0] || "Chi Tiết";
-            document.getElementById('modal-title').innerText = `Chi Tiết - ${firstRoom}`;
-            let html = '<ul class="divide-y divide-slate-200 -mt-3">';
-            entries.forEach(e => {
-                const p = e.split('*');
-                if (p.length < 6) return;
-                html += `<li class="py-3"><dl class="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
-                    <dt class="font-medium text-slate-800">Nhân viên:</dt><dd class="text-slate-700 col-span-2">${p[1]}</dd>
-                    <dt class="font-medium text-slate-800">Thời gian:</dt><dd class="text-slate-700 col-span-2">${convertExcelDate(p[2])} - ${convertExcelDate(p[3])} (${convertMinutesToHM(p[4])})</dd>
-                    <dt class="font-medium text-slate-800">Thành tiền:</dt><dd class="text-blue-700 font-semibold col-span-2">${formatCurrency(p[5])}</dd>
-                </dl></li>`;
-            });
-            document.getElementById('modal-content').innerHTML = html + '</ul>';
-            openModal();
-        }
-
+        
         function showRevenueDetailModal(i) {
             const item = globalData.doanhThu.ngay[i];
             let html = '<dl class="space-y-3">';
@@ -680,10 +469,397 @@ function renderTrangThaiPhong(data) {
             html += '</dl>';
             document.getElementById('modal-title').innerText = item.ngay.split('(')[0];
             document.getElementById('modal-content').innerHTML = html;
+            // Xóa các nút in cũ (nếu có)
+            document.getElementById('modal-footer').innerHTML = '';
             openModal();
         }
 
-        // === TIỆN ÍCH ===
+        // === CẬP NHẬT: MODAL CHI TIẾT VIP ===
+        function showVIPDetail(vipName) {
+            const normalizedName = vipName.replace(/\s+/g, ' ').trim();
+            let vipData = vipRoomsData[normalizedName];
+             if (!vipData) {
+                const variants = [normalizedName.replace(/\s/g, ''), normalizedName.toUpperCase(), normalizedName.toLowerCase()];
+                for (const variant of variants) { vipData = vipRoomsData[variant]; if (vipData) break; }
+            }
+            if (!vipData) { alert(`Không có dữ liệu chi tiết cho ${vipName}`); return; }
+
+             document.getElementById('modal-title').innerText = `Chi Tiết - ${vipName}`;
+            let html = '<div class="space-y-6">';
+            // 1. THÔNG TIN CHUNG
+            html += `<div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200"><h4 class="font-semibold text-indigo-900 mb-3 text-lg flex items-center"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Thông Tin Chung</h4><div class="grid grid-cols-2 gap-3 text-sm"><div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ vào</span><strong class="text-indigo-700">${formatDateTime(vipData.gioVao, true)}</strong></div><div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ ra</span><strong class="text-indigo-700">${formatDateTime(vipData.gioRa, true)}</strong></div><div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Chính sách</span><strong class="text-green-600">${vipData.chinhSach || '---'}</strong></div><div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Số NV</span><strong class="text-blue-600">${vipData.soNhanVien} người</strong></div></div></div>`;
+            // 2. THỰC ĐƠN
+            if (vipData.thucDon && vipData.thucDon.length > 0) {
+                html += `<div><h4 class="font-semibold text-slate-900 mb-3 flex items-center"><svg class="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>Thực Đơn (${vipData.thucDon.length} món)</h4><div class="bg-white border border-slate-200 rounded-lg overflow-hidden"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-orange-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-slate-700 uppercase">Món</th><th class="px-4 py-2 text-center text-xs font-medium text-slate-700 uppercase">SL</th><th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Đơn giá</th><th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Thành tiền</th></tr></thead><tbody class="divide-y divide-slate-100">`;
+                vipData.thucDon.forEach(mon => { html += `<tr class="hover:bg-orange-50 transition-colors"><td class="px-4 py-2 text-sm text-slate-800">${mon.ten}</td><td class="px-4 py-2 text-sm text-center font-medium text-slate-700">${mon.soLuong}</td><td class="px-4 py-2 text-sm text-right text-slate-600">${formatCurrency(mon.donGia)}</td><td class="px-4 py-2 text-sm text-right font-semibold text-slate-900">${formatCurrency(mon.thanhTien)}</td></tr>`; });
+                html += `</tbody><tfoot class="bg-orange-50 border-t-2 border-orange-200"><tr><td colspan="3" class="px-4 py-3 text-sm font-bold text-slate-700 text-right">Tổng thực đơn:</td><td class="px-4 py-3 text-base font-bold text-orange-600 text-right">${formatCurrency(vipData.tongThucDon)}</td></tr></tfoot></table></div></div>`;
+            } else { html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Chưa có thực đơn</div>`; }
+            // 3. NHÂN VIÊN
+            if (vipData.nhanVien && vipData.nhanVien.length > 0) {
+                html += `<div><h4 class="font-semibold text-slate-900 mb-3 flex items-center"><svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>Nhân Viên Phục Vụ (${vipData.soNhanVien})</h4><div class="space-y-3">`;
+                vipData.nhanVien.forEach((nv, idx) => { html += `<div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all"><div class="flex justify-between items-start mb-2"><div><span class="font-semibold text-slate-900 text-base">${idx + 1}. ${nv.ten}</span><p class="text-xs text-slate-600 mt-1"><strong>Thời gian:</strong> ${formatDateTime(nv.gioVao)} → ${formatDateTime(nv.gioRa)}</p><p class="text-xs text-slate-600"><strong>Tổng:</strong> ${convertMinutesToHM(nv.tongPhut)}</p></div><span class="font-bold text-lg text-blue-700">${formatCurrency(nv.thanhTien)}</span></div></div>`; });
+                html += `</div><div class="mt-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-4 border-2 border-blue-300"><div class="flex justify-between items-center"><span class="font-bold text-slate-800 text-lg">Tổng tiền nhân viên:</span><span class="font-bold text-blue-700 text-2xl">${formatCurrency(vipData.tongNhanVien)}</span></div></div></div>`;
+            } else { html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Chưa có nhân viên phục vụ</div>`; }
+            // 4. TỔNG KẾT
+            const tongCong = (vipData.tongThucDon || 0) + (vipData.tongNhanVien || 0);
+            html += `<div class="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-5 border-2 border-green-400"><div class="flex justify-between items-center"><span class="font-bold text-slate-900 text-xl">TỔNG CỘNG:</span><span class="font-bold text-green-700 text-3xl">${formatCurrency(tongCong)}</span></div><div class="mt-2 text-sm text-slate-600 flex justify-between"><span>Thực đơn: ${formatCurrency(vipData.tongThucDon)}</span><span>Nhân viên: ${formatCurrency(vipData.tongNhanVien)}</span></div></div>`;
+            html += '</div>';
+
+            // === THÊM MỚI: Tạo dữ liệu và Hóa đơn K58 ===
+            const durationMinutes = (vipData.gioRa - vipData.gioVao) * 1440;
+            const receiptData = {
+                phong: vipName,
+                hd: 'N/A', // VIP không có số HĐ
+                vao: vipData.gioVao, // <-- SỬA LỖI: Truyền số thô
+                ra: vipData.gioRa,   // <-- SỬA LỖI: Truyền số thô
+                thoiGian: convertMinutesToHM(durationMinutes),
+                thucDon: vipData.thucDon,
+                nhanVien: vipData.nhanVien, // <-- SỬA LỖI: Giữ nguyên tên NV
+                tongThucDon: vipData.tongThucDon,
+                tongNhanVien: vipData.tongNhanVien,
+                thanhTienHD: tongCong,
+                tienGio: null // VIP không có tiền giờ, chỉ có tổng cộng
+            };
+            
+            const k58Html = generateK58ReceiptHTML(receiptData);
+            document.getElementById('modal-content').innerHTML = html + k58Html;
+
+            // === THÊM MỚI: Thêm nút vào footer ===
+            const footerHtml = `
+                <button onclick="downloadJPGK58()" class="px-4 py-2 text-sm font-medium rounded-md text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-all">
+                    Tải ảnh JPG
+                </button>
+                <button onclick="printK58()" class="px-4 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-all">
+                    In PDF (K58)
+                </button>
+            `;
+            document.getElementById('modal-footer').innerHTML = footerHtml;
+            openModal();
+        }
+
+        
+        // === HÀM PARSE (Giữ nguyên) ===
+        function parseStaffJS(raw) {
+            if (!raw || raw === '') return [];
+            try {
+                return raw.toString().split(';').filter(x => x.trim() !== '').map(item => {
+                    const parts = item.split('*');
+                    if (parts.length < 6) return null; 
+                     return {
+                        phong: parts[0] || '',
+                        ten: parts[1] || '',
+                        gioVao: parseFloat(parts[2]) || 0,
+                         gioRa: parseFloat(parts[3]) || 0,
+                        tongPhut: parseFloat(parts[4]) || 0,
+                        thanhTien: parseFloat(parts[5]) || 0
+                    };
+                }).filter(x => x !== null);
+            } catch (e) { console.error('Lỗi parse nhân viên:', e); return []; }
+        }
+        function parseThucDonJS(raw) {
+            if (!raw || raw === '') return [];
+            try {
+                return raw.toString().split(';').filter(x => x.trim() !== '').map(item => {
+                    const parts = item.split('*');
+                    if (parts.length < 3) return null;
+                    const soLuong = parseFloat(parts[1]) || 0;
+                     const donGia = parseFloat(parts[2]) || 0;
+                    return {
+                        ten: parts[0] || '',
+                        soLuong: Math.max(0, soLuong),
+                         donGia: Math.max(0, donGia),
+                        thanhTien: Math.max(0, soLuong) * Math.max(0, donGia)
+                    };
+                }).filter(x => x !== null);
+            } catch (e) { console.error('Lỗi parse thực đơn:', e); return []; }
+        }
+
+        
+        // === CẬP NHẬT: MODAL TỔNG HỢP (Combined) ===
+        function showCombinedDetailModal(tdElement, event) {
+            event.stopPropagation();
+            const row = tdElement.closest('tr');
+            const rawDataString = row.querySelector('td[data-role="raw-data"]').innerText;
+            if (!rawDataString) return;
+            
+            const rowData = JSON.parse(rawDataString);
+            // rowData = [0:HĐ, 1:Phòng, 2:Vào, 3:Ra, 4:Thành tiền, 5:Thực đơn, 6:Phục vụ]
+            
+            document.getElementById('modal-title').innerText = `Chi Tiết Hóa Đơn - ${rowData[1]}`;
+            let html = '<div class="space-y-6">';
+
+            // 1. THÔNG TIN CHUNG
+            html += `
+                <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200">
+                    <h4 class="font-semibold text-indigo-900 mb-3 text-lg flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Thông Tin Hóa Đơn
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                         <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Số HĐ</span><strong class="text-indigo-700">${rowData[0]}</strong></div>
+                        <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Phòng</span><strong class="text-indigo-700">${rowData[1]}</strong></div>
+                        <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ vào</span><strong class="text-indigo-700">${convertExcelDate(rowData[2])}</strong></div>
+                         <div class="bg-white rounded p-2"><span class="text-slate-600 text-xs block">Giờ ra</span><strong class="text-indigo-700">${convertExcelDate(rowData[3])}</strong></div>
+                        <div class="bg-white rounded p-2 col-span-2"><span class="text-slate-600 text-xs block">Thành tiền HĐ</span><strong class="text-2xl text-green-600">${formatCurrency(rowData[4])}</strong></div>
+                    </div>
+                </div>`;
+            // 2. THỰC ĐƠN
+            const menuData = parseThucDonJS(rowData[5]);
+            let tongThucDon = 0;
+            if (menuData.length > 0) {
+                html += `<div><h4 class="font-semibold text-slate-900 mb-3 flex items-center"><svg class="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>Thực Đơn (${menuData.length} món)</h4><div class="bg-white border border-slate-200 rounded-lg overflow-hidden"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-orange-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-slate-700 uppercase">Món</th><th class="px-4 py-2 text-center text-xs font-medium text-slate-700 uppercase">SL</th><th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Thành tiền</th></tr></thead><tbody class="divide-y divide-slate-100">`;
+                menuData.forEach(mon => {
+                    tongThucDon += mon.thanhTien;
+                    html += `<tr class="hover:bg-orange-50 transition-colors"><td class="px-4 py-2 text-sm text-slate-800">${mon.ten}</td><td class="px-4 py-2 text-sm text-center font-medium text-slate-700">${mon.soLuong}</td><td class="px-4 py-2 text-sm text-right font-semibold text-slate-900">${formatCurrency(mon.thanhTien)}</td></tr>`; 
+                });
+                html += `</tbody><tfoot class="bg-orange-50 border-t-2 border-orange-200"><tr><td colspan="2" class="px-4 py-3 text-sm font-bold text-slate-700 text-right">Tổng thực đơn:</td><td class="px-4 py-3 text-base font-bold text-orange-600 text-right">${formatCurrency(tongThucDon)}</td></tr></tfoot></table></div></div>`;
+            } else {
+                html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Không có thực đơn</div>`;
+            }
+
+            // 3. NHÂN VIÊN
+            const staffData = parseStaffJS(rowData[6]);
+            let tongNhanVien = 0;
+            if (staffData.length > 0) {
+                html += `<div><h4 class="font-semibold text-slate-900 mb-3 flex items-center"><svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>Nhân Viên Phục Vụ (${staffData.length})</h4><div class="space-y-3">`;
+                staffData.forEach((nv, idx) => {
+                    tongNhanVien += nv.thanhTien;
+                    html += `<div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4"><div class="flex justify-between items-start mb-2"><div><span class="font-semibold text-slate-900 text-base">${idx + 1}. ${nv.ten}</span><p class="text-xs text-slate-600 mt-1"><strong>Thời gian:</strong> ${convertExcelDate(nv.gioVao)} → ${convertExcelDate(nv.gioRa)} (${convertMinutesToHM(nv.tongPhut)})</p></div><span class="font-bold text-lg text-blue-700">${formatCurrency(nv.thanhTien)}</span></div></div>`;
+                });
+                html += `</div><div class="mt-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-4 border-2 border-blue-300"><div class="flex justify-between items-center"><span class="font-bold text-slate-800 text-lg">Tổng tiền nhân viên:</span><span class="font-bold text-blue-700 text-2xl">${formatCurrency(tongNhanVien)}</span></div></div></div>`;
+            } else {
+                html += `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Không có nhân viên phục vụ</div>`;
+            }
+
+            html += '</div>';
+
+            // === THÊM MỚI: Tạo dữ liệu và Hóa đơn K58 ===
+            const thanhTienHD = parseFloat(rowData[4]);
+            const tienGio = thanhTienHD - tongThucDon - tongNhanVien;
+            const durationMinutes = (rowData[3] - rowData[2]) * 1440;
+
+            // ...
+            const receiptData = {
+                phong: rowData[1],
+                hd: rowData[0],
+                vao: rowData[2], // <-- SỬA LỖI: Truyền số thô
+                ra: rowData[3],   // <-- SỬA LỖI: Truyền số thô
+                thoiGian: convertMinutesToHM(durationMinutes),
+            // ...
+                thucDon: menuData,
+                nhanVien: staffData, // <-- SỬA LỖI: Giữ nguyên tên NV
+                tongThucDon: tongThucDon,
+                tongNhanVien: tongNhanVien,
+                thanhTienHD: thanhTienHD,
+                tienGio: tienGio // Tính tiền giờ theo yêu cầu
+            };
+            
+            const k58Html = generateK58ReceiptHTML(receiptData);
+            document.getElementById('modal-content').innerHTML = html + k58Html;
+
+            // === THÊM MỚI: Thêm nút vào footer ===
+            const footerHtml = `
+                <button onclick="downloadJPGK58()" class="px-4 py-2 text-sm font-medium rounded-md text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-all">
+                    Tải ảnh JPG
+                </button>
+                <button onclick="printK58()" class="px-4 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-all">
+                    In PDF (K58)
+                </button>
+            `;
+            document.getElementById('modal-footer').innerHTML = footerHtml;
+            openModal();
+        }
+
+        // === MODAL CHI TIẾT NHÂN VIÊN (Giữ nguyên) ===
+        function showStaffDetailModal(tdElement, event) {
+            event.stopPropagation();
+            const row = tdElement.closest('tr');
+            const detailString = row.querySelector('td[data-role="detail"]').innerText;
+            const entries = parseStaffJS(detailString);
+            if (!entries.length) {
+                document.getElementById('modal-title').innerText = 'Chi Tiết Phục Vụ';
+                document.getElementById('modal-content').innerHTML = `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Không có nhân viên phục vụ</div>`;
+                document.getElementById('modal-footer').innerHTML = ''; // Xóa nút in
+                openModal();
+                return;
+            }
+            const firstRoom = entries[0].phong || "Chi Tiết";
+            document.getElementById('modal-title').innerText = `Chi Tiết - ${firstRoom}`;
+            let html = '<ul class="divide-y divide-slate-200 -mt-3">';
+            entries.forEach(nv => {
+                html += `<li class="py-3"><dl class="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
+                    <dt class="font-medium text-slate-800">Nhân viên:</dt><dd class="text-slate-700 col-span-2">${nv.ten}</dd>
+                    <dt class="font-medium text-slate-800">Thời gian:</dt><dd class="text-slate-700 col-span-2">${convertExcelDate(nv.gioVao)} - ${convertExcelDate(nv.gioRa)} (${convertMinutesToHM(nv.tongPhut)})</dd>
+                    <dt class="font-medium text-slate-800">Thành tiền:</dt><dd class="text-blue-700 font-semibold col-span-2">${formatCurrency(nv.thanhTien)}</dd>
+                </dl></li>`;
+            });
+            document.getElementById('modal-content').innerHTML = html + '</ul>';
+            document.getElementById('modal-footer').innerHTML = ''; // Xóa nút in
+            openModal();
+        }
+
+        // === MODAL CHI TIẾT THỰC ĐƠN (Giữ nguyên) ===
+        function showMenuDetailModal(tdElement, event) {
+            event.stopPropagation();
+            const row = tdElement.closest('tr');
+            const menuString = row.querySelector('td[data-role="menu"]').innerText;
+            const menuData = parseThucDonJS(menuString);
+            if (menuData.length === 0) {
+                document.getElementById('modal-title').innerText = 'Chi Tiết Thực Đơn';
+                document.getElementById('modal-content').innerHTML = `<div class="text-sm text-slate-500 italic bg-slate-50 rounded-lg p-4 text-center">Không có thực đơn</div>`;
+                document.getElementById('modal-footer').innerHTML = ''; // Xóa nút in
+                openModal();
+                return;
+            }
+            const phong = JSON.parse(row.querySelector('td[data-role="raw-data"]').innerText)[1];
+            document.getElementById('modal-title').innerText = `Thực Đơn - ${phong}`;
+            let html = '<div class="space-y-4">';
+            let tongThucDon = 0;
+            html += `<div class="bg-white border border-slate-200 rounded-lg overflow-hidden"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-orange-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-slate-700 uppercase">Món</th><th class="px-4 py-2 text-center text-xs font-medium text-slate-700 uppercase">SL</th><th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Đơn giá</th><th class="px-4 py-2 text-right text-xs font-medium text-slate-700 uppercase">Thành tiền</th></tr></thead><tbody class="divide-y divide-slate-100">`;
+            menuData.forEach(mon => {
+                tongThucDon += mon.thanhTien;
+                html += `<tr class="hover:bg-orange-50 transition-colors"><td class="px-4 py-2 text-sm text-slate-800">${mon.ten}</td><td class="px-4 py-2 text-sm text-center font-medium text-slate-700">${mon.soLuong}</td><td class="px-4 py-2 text-sm text-right text-slate-600">${formatCurrency(mon.donGia)}</td><td class="px-4 py-2 text-sm text-right font-semibold text-slate-900">${formatCurrency(mon.thanhTien)}</td></tr>`;
+            });
+            html += `</tbody><tfoot class="bg-orange-50 border-t-2 border-orange-200"><tr><td colspan="3" class="px-4 py-3 text-sm font-bold text-slate-700 text-right">Tổng thực đơn:</td><td class="px-4 py-3 text-base font-bold text-orange-600 text-right">${formatCurrency(tongThucDon)}</td></tr></tfoot></table></div>`;
+            html += '</div>';
+            document.getElementById('modal-content').innerHTML = html;
+            document.getElementById('modal-footer').innerHTML = ''; // Xóa nút in
+            openModal();
+        }
+
+        // === THÊM MỚI: HÀM TẠO HÓA ĐƠN K58 ===
+        // === CẬP NHẬT: HÀM TẠO HÓA ĐƠN K58 ===
+        function generateK58ReceiptHTML(data) {
+            const printDate = new Date().toLocaleString('vi-VN', { 
+                day: '2-digit', month: '2-digit', year: 'numeric', 
+                hour: '2-digit', minute: '2-digit' 
+            });
+
+            let html = `<div id="printable-receipt" class="k58-receipt">`;
+            
+            // 1. Header
+            html += `<div class="header">
+                        <h1>PHIẾU THANH TOÁN</h1>
+                        <p>Phòng: ${data.phong}</p>
+                     </div>`;
+            
+            // 2. Info (SỬA LỖI: Bỏ "Thời gian")
+            html += `<div class="info">
+                        <table>
+                            <tr><td>HĐ:</td><td>${data.hd}</td></tr>
+                            <tr><td>Vào:</td><td>${formatDateTime(data.vao, true)}</td></tr>
+                            <tr><td>Ra:</td><td>${formatDateTime(data.ra, true)}</td></tr>
+                        </table>
+                     </div>`;
+            
+            // 3. Phụ thu (SỬA: Dùng class "section-header")
+            if (data.nhanVien && data.nhanVien.length > 0) {
+                html += `<div class="section-header">PHỤ THU</div>
+                         <table class="items-table">
+                            <thead><tr><th>NV</th><th class="col-sl">Vào</th><th class="col-sl">Ra</th><th class="col-tien">T.Tiền</th></tr></thead>
+                            <tbody>`;
+                data.nhanVien.forEach(nv => {
+                    html += `<tr>
+                                <td>${nv.ten}</td>
+                                <td class="col-sl">${formatDateTime(nv.gioVao)}</td>
+                                <td class="col-sl">${formatDateTime(nv.gioRa)}</td>
+                                <td class="col-tien">${formatCurrency(nv.thanhTien)}</td>
+                             </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+
+            // 4. Thực đơn (SỬA: Dùng class "section-header")
+            if (data.thucDon && data.thucDon.length > 0) {
+                html += `<div class="section-header">THỰC ĐƠN</div>
+                         <table class="items-table">
+                            <thead><tr><th>Tên hàng</th><th class="col-sl">SL</th><th class="col-tien">Đ.Giá</th><th class="col-tien">T.Tiền</th></tr></thead>
+                            <tbody>`;
+                data.thucDon.forEach(mon => {
+                    html += `<tr>
+                                <td>${mon.ten}</td>
+                                <td class="col-sl">${mon.soLuong}</td>
+                                <td class="col-tien">${formatCurrency(mon.donGia)}</td>
+                                <td class="col-tien">${formatCurrency(mon.thanhTien)}</td>
+                             </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+
+            // 5. Summary
+            html += `<div class="summary">
+                        <table>`;
+            if (data.tongThucDon > 0) {
+                html += `<tr><td>Thực đơn:</td><td>${formatCurrency(data.tongThucDon)}</td></tr>`;
+            }
+            if (data.tienGio !== null && data.tienGio !== 0) {
+                 html += `<tr><td>Tiền giờ:</td><td>${formatCurrency(data.tienGio)}</td></tr>`;
+            }
+            if (data.tongNhanVien > 0) {
+                html += `<tr><td>Phụ thu:</td><td>${formatCurrency(data.tongNhanVien)}</td></tr>`;
+            }
+            html += `       <tr class="total">
+                                <td>Thành tiền:</td>
+                                <td>${formatCurrency(data.thanhTienHD)}</td>
+                            </tr>
+                        </table>
+                     </div>`;
+
+            // 6. Footer
+            html += `<div class="footer">
+                        <p>In lúc: ${printDate}</p>
+                        <p>Cảm ơn quý khách. Hẹn gặp lại!</p>
+                     </div>`;
+
+            html += `</div>`; // Đóng .k58-receipt
+            return html;
+        }
+        
+        // === THÊM MỚI: HÀM IN K58 ===
+        function printK58() {
+            window.print();
+        }
+
+        // === THÊM MỚI: HÀM TẢI JPG K58 ===
+        function downloadJPGK58() {
+            const receiptElement = document.getElementById('printable-receipt');
+            if (!receiptElement) return;
+
+            // Tạm thời làm cho phần tử có thể render được (nhưng vô hình)
+            // vì html2canvas không thể chụp ảnh `display: none`
+            receiptElement.style.display = 'block';
+            receiptElement.style.position = 'absolute';
+            receiptElement.style.left = '-9999px'; // Đẩy ra khỏi màn hình
+            receiptElement.style.top = '0';
+
+            html2canvas(receiptElement, {
+                scale: 2, // Tăng chất lượng ảnh
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            }).then(canvas => {
+                // Ẩn lại phần tử sau khi chụp
+                receiptElement.style.display = 'none';
+                receiptElement.style.position = '';
+                receiptElement.style.left = '';
+                receiptElement.style.top = '';
+
+                // Tạo link tải về
+                const link = document.createElement('a');
+                link.download = `hoa-don-${Date.now()}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.9); // Chất lượng 90%
+                link.click();
+            }).catch(err => {
+                console.error('Lỗi khi chụp ảnh hóa đơn:', err);
+                // Ẩn lại phần tử nếu có lỗi
+                receiptElement.style.display = 'none';
+                receiptElement.style.position = '';
+                receiptElement.style.left = '';
+                receiptElement.style.top = '';
+            });
+        }
+
+
+        // === TIỆN ÍCH (Giữ nguyên) ===
         function getTrangThaiClasses(s) {
             s = s.toLowerCase();
             if (s.includes('trống')) return 'bg-green-50 text-green-800 border-green-400';
@@ -691,102 +867,64 @@ function renderTrangThaiPhong(data) {
             if (s.includes('chưa dọn')) return 'bg-slate-100 text-slate-700 border-slate-400';
             return 'bg-slate-50 text-slate-700 border-slate-200';
         }
-
-        // === HÀM MỚI: FORMAT THỜI GIAN (XỬ LÝ CẢ TEXT VÀ SERIAL) ===
         function formatDateTime(value, fullDate = false) {
-            // Nếu là chuỗi text đã format sẵn (VD: "31/10/2025 23:14")
             if (typeof value === 'string' && value.trim() !== '') {
-                // Kiểm tra xem có phải định dạng dd/MM/yyyy HH:mm không
-                if (value.match(/\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}/)) {
-                    return value; // Trả về nguyên text
-                }
-                // Nếu chỉ có giờ "14:30"
-                if (value.match(/^\d{1,2}:\d{2}$/)) {
-                    return value;
-                }
+                if (value.match(/\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}/)) return value;
+                if (value.match(/^\d{1,2}:\d{2}$/)) return value;
             }
-            
-            // Nếu là số serial Excel, dùng hàm cũ
             return convertExcelDate(value, fullDate);
         }
-
         function convertExcelDate(serial, fullDate = false) {
-            // Xử lý giá trị rỗng
             if (!serial || serial === '' || serial === 0) return '---';
+            if (typeof serial === 'string') serial = parseFloat(serial);
+            if (isNaN(serial) || serial < 0) return '---';
             
-            // Xử lý chuỗi text (nếu có)
-            if (typeof serial === 'string') {
-                serial = parseFloat(serial);
-            }
-            
-            // Kiểm tra là số hợp lệ
-            if (isNaN(serial)) return '---';
-            
-            // Với Excel date serial phải > 0
-            if (serial < 0) return '---';
-            
-            // Chuyển đổi Excel serial sang Date
-            const date = new Date((serial - 25569) * 86400000);
+            const date = new Date((serial - 25569) * 86400000); // <-- Sửa lỗi 'onst'
             const adj = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
             
-            // Nếu yêu cầu full date hoặc serial < 1 (chỉ có giờ)
-            if (fullDate || serial < 1) {
-                return adj.toLocaleString('vi-VN', { 
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                }).replace(',', '');
+            // SỬA LỖI LOGIC: Chỉ thêm ngày/tháng/năm nếu fullDate = true
+            const options = { hour: '2-digit', minute: '2-digit' };
+            if (fullDate) {
+                options.day = '2-digit';
+                options.month = '2-digit';
+                options.year = 'numeric';
             }
             
-            // Mặc định chỉ hiển thị giờ:phút
-            return adj.toLocaleString('vi-VN', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            }).replace(',', '');
+            return adj.toLocaleString('vi-VN', options).replace(',', '');
         }
-
         function formatStringDateToDM(str) {
             if (!str || str.length < 10) return '---';
             const p = str.split('/');
             return p.length >= 2 ? `${p[0]}/${p[1]}` : str;
         }
-
         function convertMinutesToHM(m) {
             if (isNaN(m) || m < 0) return '---';
             const h = Math.floor(m / 60), min = Math.round(m % 60);
             return `${h} giờ ${min} phút`;
         }
-
         function formatCurrency(n) {
             if (isNaN(n)) return n;
             return new Intl.NumberFormat('vi-VN').format(n);
         }
-
-        // === CACHE & UI ===
         function getCache() {
             try {
                 const c = localStorage.getItem(CACHE_KEY);
                 return c ? JSON.parse(c) : null;
             } catch { return null; }
         }
-
         function setCache(data, lastUpdated, a1, vipRooms) {
             try {
                 localStorage.setItem(CACHE_KEY, JSON.stringify({ 
-                    data, 
-                    lastUpdated, 
-                    a1, 
-                    vipRooms, // ← LƯU VIP VÀO CACHE
-                    ts: Date.now() 
+                    data, lastUpdated, a1, vipRooms, ts: Date.now() 
                 }));
             } catch (e) { console.error('Lỗi cache:', e); }
         }
-
-        function hideLoader() { pageLoader.style.display = 'none'; dashboard.classList.remove('hidden'); }
-        function setLoading(l) { refreshButton.disabled = l; refreshButton.classList.toggle('loading', l); refreshButton.classList.toggle('disabled', l); }
-        function showToast(m) { refreshToast.textContent = m; refreshToast.classList.remove('hidden'); setTimeout(() => refreshToast.classList.add('hidden'), 3000); }
+        function hideLoader() { pageLoader.style.display = 'none';
+            dashboard.classList.remove('hidden'); }
+        function setLoading(l) { refreshButton.disabled = l; refreshButton.classList.toggle('loading', l); refreshButton.classList.toggle('disabled', l);
+        }
+        function showToast(m) { refreshToast.textContent = m; refreshToast.classList.remove('hidden'); setTimeout(() => refreshToast.classList.add('hidden'), 3000);
+        }
     </script>
 </body>
 </html>
