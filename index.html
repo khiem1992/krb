@@ -54,12 +54,11 @@
             background: white;
         }
         #print-invoice .header { text-align: center; font-weight: bold; margin-bottom: 6px; font-size: 11px; }
-        #print-invoice .section-title { font-weight: bold; margin-top: 6px; border-bottom: 1px dashed #000; padding-bottom: 2px; font-size: 10px; }
+        #print-invoice .section-title { font-weight: bold; margin-top: 6px;font-size: 10px; }
         #print-invoice table { width: 100%; border-collapse: collapse; margin: 3px 0; }
         #print-invoice td { padding: 1px 0; font-size: 9px; }
         #print-invoice .text-right { text-align: right; }
         #print-invoice .total-line { border-top: 1px solid #000; padding-top: 2px; margin-top: 2px; }
-        #print-invoice .dashed-line { border-top: 1px dashed #000; margin: 5px 0; }
         #print-invoice .footer { text-align: center; font-style: italic; margin-top: 8px; font-size: 8px; }
     </style>
 </head>
@@ -756,12 +755,13 @@
                 <div style="text-align: right; margin-top: 5px; font-size: 9px;">
                     <strong>TỔNG PHỤ THU: ${formatCurrency(currentInvoiceData.tongNhanVien)}</strong>
                 </div>
-                 <div class="dashed-line"></div>`;
+                 <div style="font-size: 10px; line-height: 1; margin: 5px 0;">-----------------------------------</div>`;
             
             // PHẦN THANH TOÁN
             const soHD = currentInvoiceData.soHD || '';
             html += `
                 <div class="section-title">PHIẾU THANH TOÁN</div>
+    <div style="font-size: 10px; line-height: 1; margin-top: 2px;">-----------------------------------</div>
                 <div style="margin: 4px 0;">
                     <strong>Phòng: ${currentInvoiceData.phong}</strong>
                 </div>`;
@@ -810,7 +810,7 @@
                 html += `
                     </tbody>
                 </table>
-                <div class="dashed-line"></div>`;
+                <div style="font-size: 10px; line-height: 1; margin: 5px 0;">-----------------------------------</div>`;
             }
             
             // TỔNG KẾT
@@ -836,7 +836,7 @@
                     </div>
                 </div>
             
-                 <div class="dashed-line"></div>
+                 <div style="font-size: 10px; line-height: 1; margin: 5px 0;">-----------------------------------</div>
                 <div class="footer">
                     In lúc: ${dateStr} ${timeStr}<br>
                     Cảm ơn quý khách. Hẹn gặp lại!
