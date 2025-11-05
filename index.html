@@ -624,13 +624,6 @@
             html += `<div style="margin: 2px 0; font-size: 9px;">Vào: ${formatDateTime(currentInvoiceData.gioVao, true)}</div>
                      <div style="margin: 2px 0; font-size: 9px;">Ra: ${formatDateTime(currentInvoiceData.gioRa, true)}</div>`;
             
-            const gioVao = parseFloat(currentInvoiceData.gioVao);
-            const gioRa = parseFloat(currentInvoiceData.gioRa);
-            if (!isNaN(gioVao) && !isNaN(gioRa) && gioRa > gioVao) {
-                const diffMinutes = Math.round((gioRa - gioVao) * 24 * 60);
-                html += `<div style="margin: 2px 0; font-size: 9px;">Thời gian: ${Math.floor(diffMinutes / 60)} giờ, ${diffMinutes % 60} phút</div>`;
-            }
-            
             if (currentInvoiceData.thucDon && currentInvoiceData.thucDon.length > 0) {
                 html += `<table style="margin-top: 5px;"><thead><tr><td style="width: 50%;"><strong>Tên hàng</strong></td><td style="width: 25%; text-align: center;"><strong>SL</strong></td><td style="width: 25%; text-align: right;"><strong>T.Tiền</strong></td></tr></thead><tbody>`;
                 currentInvoiceData.thucDon.forEach(mon => {
