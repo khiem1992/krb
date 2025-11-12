@@ -899,7 +899,7 @@
             const printDiv = document.getElementById('print-invoice');
             printDiv.innerHTML = generateInvoiceHTML();
             printDiv.style.display = 'block';
-            setTimeout(() => { window.print(); printDiv.style.display = 'none'; }, 100);
+            setTimeout(() => { window.print(); printDiv.style.display = 'none'; }, 500);
         }
 
         async function downloadInvoiceJPG() {
