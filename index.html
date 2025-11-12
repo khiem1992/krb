@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Báo Cáo Online (v25 - Auto Login)</title>
+    <title>Báo Cáo Online (v26 - Auto Login)</title>
     <link rel="preconnect" href="https://script.google.com">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -895,12 +895,27 @@
         }
 
         function printInvoicePDF() {
-            if (!currentInvoiceData) { alert('Không có dữ liệu hóa đơn để in!'); return; }
-            const printDiv = document.getElementById('print-invoice');
-            printDiv.innerHTML = generateInvoiceHTML();
-            printDiv.style.display = 'block';
-            setTimeout(() => { window.print(); printDiv.style.display = 'none'; }, 500);
-        }
+    if (!currentInvoiceData) { 
+        alert('Không có dữ liệu hóa đơn để in!');
+        return; 
+    }
+    
+    const printDiv = document.getElementById('print-invoice');
+    printDiv.innerHTML = generateInvoiceHTML();
+    printDiv.style.display = 'block';
+
+    // 1. Yêu cầu trình duyệt áp dụng các thay đổi trên
+    requestAnimationFrame(() => {
+        // 2. Đợi thêm một tick ngắn (0ms) để đảm bảo render đã hoàn tất
+        setTimeout(() => {
+            // 3. Bây giờ mới gọi in
+            window.print();
+            
+            // 4. Dọn dẹp sau khi in
+            printDiv.style.display = 'none';
+        }, 0); 
+    });
+}
 
         async function downloadInvoiceJPG() {
             if (!currentInvoiceData) { alert('Không có dữ liệu hóa đơn để tải!'); return; }
