@@ -1,72 +1,327 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Dữ Liệu (bc.csv)</title>
-    <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #1d4ed8; }
-        #status { margin-top: 15px; font-size: 0.9em; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Phiên bản File</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+  
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none; border-radius: 10px; }
+    .version-row:hover { background-color: #f1f3f5; }
+    /* Diff Styles */
+    .diff-container { max-height: 400px; overflow-y: auto; font-family: monospace; background: #fff; padding: 10px; border: 1px solid #ddd; }
+    .diff-added { background-color: #d4edda; color: #155724; display: block; }
+    .diff-removed { background-color: #f8d7da; color: #721c24; text-decoration: line-through; opacity: 0.7; display: block; }
+    .diff-normal { color: #666; display: block; }
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: none; align-items: center; justify-content: center; }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Cập Nhật Dữ Liệu</h2>
-        <input type="password" id="passInput" placeholder="Nhập mật khẩu (mit)...">
-        <input type="file" id="csvFile" accept=".csv">
-        <button onclick="uploadFile()" id="btnUpload">Tải Lên</button>
-        <p id="status"></p>
+
+<div class="container py-4">
+  <div class="mb-3">
+    <a href="/index.html" class="btn btn-outline-secondary">
+      <i class="fa-solid fa-arrow-left"></i> Quay lại Báo cáo
+    </a>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col text-center">
+      <h2 class="text-primary fw-bold"><i class="fa-solid fa-cloud-arrow-up"></i> Quản lý File BCDuPhong.csv</h2>
+      <p class="text-muted">Hệ thống quản lý phiên bản & Khôi phục dữ liệu</p>
     </div>
+  </div>
 
-    <script>
-        // --- THAY LINK GAS CỦA BẠN VÀO DƯỚI ĐÂY ---
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyP6oEh7cTcvVE3NAdAZ_Pz2Leq2-cHckD1mNNZLWRInw9pdRIe1uE02WcGh3sNkhDs/exec'; 
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3"><i class="fa-solid fa-upload"></i> Upload Phiên bản Mới</h5>
+      <div class="input-group mb-3">
+        <input type="file" class="form-control" id="fileInput" accept=".csv">
+        <button class="btn btn-primary" type="button" onclick="handleUpload()">
+          <i class="fa-solid fa-paper-plane"></i> Cập nhật ngay
+        </button>
+      </div>
+      <small class="text-muted text-fst-italic">* File mới sẽ thay thế nội dung hiện tại (Giữ nguyên ID). Nội dung cũ sẽ được lưu vào lịch sử.</small>
+    </div>
+  </div>
 
-        function uploadFile() {
-            const pass = document.getElementById('passInput').value;
-            const fileInput = document.getElementById('csvFile');
-            const file = fileInput.files[0];
-            const status = document.getElementById('status');
-            const btn = document.getElementById('btnUpload');
+  <div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <h5 class="m-0 text-success"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử Phiên bản</h5>
+      <button class="btn btn-sm btn-outline-secondary" onclick="loadRevisions()"><i class="fa-solid fa-sync"></i> Làm mới</button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Thời gian</th>
+              <th>Người sửa</th>
+              <th>Kích thước</th>
+              <th class="text-center">So sánh</th>
+              <th class="text-end">Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="revisionTableBody">
+            <tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer bg-white text-end">
+       <button id="btnCompare" class="btn btn-warning disabled" onclick="compareVersions()">
+         <i class="fa-solid fa-code-compare"></i> So sánh 2 bản đã chọn
+       </button>
+    </div>
+  </div>
+</div>
 
-            if (!file) { status.textContent = "❌ Chưa chọn file!"; return; }
-            if (!pass) { status.textContent = "❌ Chưa nhập mật khẩu!"; return; }
+<div class="modal fade" id="compareModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📊 So sánh Thay đổi</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-2">
+          <div class="col-6 text-center border-end"><strong class="text-danger">Bản Cũ (Gốc)</strong></div>
+          <div class="col-6 text-center"><strong class="text-success">Bản Mới (Đích)</strong></div>
+        </div>
+        <div id="diffOutput" class="diff-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-            status.textContent = "⏳ Đang tải lên...";
-            status.style.color = "blue";
-            btn.disabled = true;
+<div class="loading-overlay" id="loading">
+  <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+</div>
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        password: pass, // Gửi mật khẩu lên để GAS kiểm tra
-                        content: e.target.result
-                    })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        status.textContent = "✅ " + data.message;
-                        status.style.color = "green";
-                    } else {
-                        status.textContent = "❌ " + data.message;
-                        status.style.color = "red";
-                    }
-                })
-                .catch(err => {
-                    status.textContent = "❌ Lỗi kết nối!";
-                    status.style.color = "red";
-                })
-                .finally(() => btn.disabled = false);
-            };
-            reader.readAsText(file);
-        }
-    </script>
+<script>
+  // ==========================================
+  // CẤU HÌNH API
+  // ==========================================
+  // 👇👇👇 DÁN LINK WEB APP CỦA BẠN VÀO DƯỚI ĐÂY 👇👇👇
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQi7IO0ZwJUuEg6ffm9f_S1SAW6CMO0QysBfaa88vgm1PnfEsIDYnzXxKZebK5uWUl/exec";
+  
+  let revisionsData = [];
+
+  // 1. INIT
+  window.onload = function() {
+    loadRevisions();
+  };
+
+  function toggleLoading(show) {
+    document.getElementById('loading').style.display = show ? 'flex' : 'none';
+  }
+
+  // 2. GỌI API (Fetch)
+  async function callAPI(payload) {
+    try {
+      // Sử dụng POST với text/plain để tránh Preflight CORS
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi kết nối Server: " + e.message);
+      return null;
+    }
+  }
+
+  // 3. UPLOAD FILE (Chuyển Base64)
+  function handleUpload() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) { alert('Vui lòng chọn file!'); return; }
+    
+    toggleLoading(true);
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(file); // Đọc file thành chuỗi base64
+    reader.onload = async function(e) {
+      const base64Content = e.target.result;
+      
+      const res = await callAPI({
+        action: 'upload',
+        content: base64Content,
+        mimeType: file.type || 'text/csv'
+      });
+
+      toggleLoading(false);
+      if(res && res.status === 'success') {
+        alert(res.message);
+        fileInput.value = '';
+        loadRevisions(); 
+      } else {
+        alert('Lỗi: ' + (res ? res.message : 'Unknown'));
+      }
+    };
+  }
+
+  // 4. LOAD DANH SÁCH
+  async function loadRevisions() {
+    toggleLoading(true);
+    const data = await callAPI({ action: 'list' });
+    toggleLoading(false);
+    
+    if (Array.isArray(data)) {
+      renderTable(data);
+    } else {
+      document.getElementById('revisionTableBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Không tải được dữ liệu.</td></tr>';
+    }
+  }
+
+  function renderTable(data) {
+    revisionsData = data;
+    const tbody = document.getElementById('revisionTableBody');
+    tbody.innerHTML = '';
+
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3">Chưa có file hoặc lịch sử.</td></tr>';
+      return;
+    }
+
+    data.forEach((rev, index) => {
+      const isLatest = index === 0;
+      const dateStr = new Date(rev.modifiedDate).toLocaleString('vi-VN');
+      
+      let actions = '';
+      if (!isLatest) {
+        actions += `<button class="btn btn-sm btn-outline-primary me-1" title="Khôi phục" onclick="restoreRev('${rev.id}')"><i class="fa-solid fa-rotate-left"></i></button>`;
+      }
+      actions += `<button class="btn btn-sm btn-outline-secondary me-1" title="Tải về" onclick="downloadRev('${rev.id}', '${dateStr}')"><i class="fa-solid fa-download"></i></button>`;
+      
+      if (!isLatest) {
+         actions += `<button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteRev('${rev.id}')"><i class="fa-solid fa-trash"></i></button>`;
+      } else {
+         actions += `<span class="badge bg-success">Hiện tại</span>`;
+      }
+
+      const row = `
+        <tr class="version-row">
+          <td><strong>${dateStr}</strong></td>
+          <td>${rev.lastModifyingUserName}</td>
+          <td>${rev.fileSize}</td>
+          <td class="text-center">
+            <input type="checkbox" class="form-check-input compare-check" value="${rev.id}" onchange="checkCompareLimit(this)">
+          </td>
+          <td class="text-end">${actions}</td>
+        </tr>
+      `;
+      tbody.innerHTML += row;
+    });
+  }
+
+  // 5. KHÔI PHỤC
+  async function restoreRev(id) {
+    if(!confirm('Khôi phục phiên bản này sẽ ghi đè lên nội dung hiện tại?')) return;
+    toggleLoading(true);
+    const res = await callAPI({ action: 'restore', id: id });
+    toggleLoading(false);
+    if(res && res.status === 'success') { alert('Đã khôi phục thành công!'); loadRevisions(); }
+    else alert('Lỗi: ' + (res ? res.message : 'Unknown'));
+  }
+
+  // 6. XÓA
+  async function deleteRev(id) {
+    if(!confirm('Cảnh báo: Xóa vĩnh viễn phiên bản này?')) return;
+    toggleLoading(true);
+    const res = await callAPI({ action: 'delete', id: id });
+    toggleLoading(false);
+    if(res && res.status === 'success') { loadRevisions(); }
+    else alert('Lỗi: ' + (res ? res.message : 'Unknown'));
+  }
+
+  // 7. DOWNLOAD
+  async function downloadRev(id, dateLabel) {
+    toggleLoading(true);
+    const content = await callAPI({ action: 'getContent', id: id });
+    toggleLoading(false);
+    
+    if (typeof content !== 'string') { alert('Không tải được nội dung'); return; }
+
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `bcduphong_${dateLabel.replace(/[\s:/]/g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // 8. SO SÁNH
+  function checkCompareLimit(checkbox) {
+    const checked = document.querySelectorAll('.compare-check:checked');
+    if (checked.length > 2) {
+      checkbox.checked = false;
+      alert("Chỉ được chọn 2 phiên bản để so sánh!");
+    }
+    const btn = document.getElementById('btnCompare');
+    if (checked.length === 2) btn.classList.remove('disabled');
+    else btn.classList.add('disabled');
+  }
+
+  async function compareVersions() {
+    const checked = document.querySelectorAll('.compare-check:checked');
+    if (checked.length !== 2) return;
+    
+    const id1 = checked[0].value;
+    const id2 = checked[1].value;
+    
+    toggleLoading(true);
+    const contents = await callAPI({ action: 'getContent', id: [id1, id2] });
+    toggleLoading(false);
+
+    if (!Array.isArray(contents)) { alert('Lỗi tải dữ liệu so sánh'); return; }
+
+    // Logic: Index lớn hơn trong revisionsData = Cũ hơn
+    const idx1 = revisionsData.findIndex(r => r.id === id1);
+    const idx2 = revisionsData.findIndex(r => r.id === id2);
+    
+    let oldContent, newContent;
+    if (idx1 > idx2) { oldContent = contents[0]; newContent = contents[1]; } 
+    else { oldContent = contents[1]; newContent = contents[0]; }
+    
+    showDiffModal(oldContent, newContent);
+  }
+
+  function showDiffModal(oldText, newText) {
+    const diff = Diff.diffLines(oldText, newText);
+    const display = document.getElementById('diffOutput');
+    display.innerHTML = '';
+    
+    const fragment = document.createDocumentFragment();
+    diff.forEach((part) => {
+      const span = document.createElement('div');
+      span.style.whiteSpace = 'pre-wrap';
+      if (part.added) {
+        span.className = 'diff-added';
+        span.textContent = '+ ' + part.value;
+      } else if (part.removed) {
+        span.className = 'diff-removed';
+        span.textContent = '- ' + part.value;
+      } else {
+        span.className = 'diff-normal';
+        span.textContent = '  ' + part.value;
+      }
+      fragment.appendChild(span);
+    });
+    
+    display.appendChild(fragment);
+    new bootstrap.Modal(document.getElementById('compareModal')).show();
+  }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
