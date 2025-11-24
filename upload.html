@@ -2,54 +2,80 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Upload CSV xem dữ liệu</title>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <style>
-        table { border-collapse: collapse; width: 100%; margin-top: 20px }
-        th, td { border: 1px solid #ccc; padding: 6px; font-size: 14px; }
-        th { background: #f5f5f5; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Báo Cáo CSV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Cập Nhật Dữ Liệu</h2>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Chọn file CSV (baocao.csv)</label>
+            <input type="file" id="csvFile" accept=".csv" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
 
-<h2>Tải CSV lên để xem dữ liệu</h2>
+        <button onclick="uploadFile()" id="btnUpload" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 flex justify-center items-center">
+            <span>Tải Lên Server</span>
+        </button>
+        
+        <p id="status" class="mt-4 text-center text-sm font-medium"></p>
+    </div>
 
-<input type="file" id="csvFile" accept=".csv">
-<button onclick="readCSV()">Đọc CSV</button>
+    <script>
+        const GAS_URL = 'YOUR_GAS_WEB_APP_URL'; // DÁN LINK WEB APP CỦA BẠN VÀO ĐÂY
 
-<div id="output"></div>
+        function uploadFile() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            const status = document.getElementById('status');
+            const btn = document.getElementById('btnUpload');
 
-<script>
-function readCSV() {
-    const fileInput = document.getElementById("csvFile");
-    if (!fileInput.files.length) {
-        alert("Vui lòng chọn file CSV!");
-        return;
-    }
-
-    Papa.parse(fileInput.files[0], {
-        complete: function(result) {
-            const data = result.data;
-            let html = "<table>";
-
-            // Render dòng đầu tiên làm header
-            html += "<tr>";
-            data[0].forEach(h => html += `<th>${h}</th>`);
-            html += "</tr>";
-
-            // Render các dòng dữ liệu
-            for (let i = 1; i < data.length; i++) {
-                html += "<tr>";
-                data[i].forEach(c => html += `<td>${c}</td>`);
-                html += "</tr>";
+            if (!file) {
+                status.innerText = "Vui lòng chọn file!";
+                status.className = "mt-4 text-center text-sm font-medium text-red-500";
+                return;
             }
 
-            html += "</table>";
-            document.getElementById("output").innerHTML = html;
-        }
-    });
-}
-</script>
+            status.innerText = "Đang tải lên...";
+            status.className = "mt-4 text-center text-sm font-medium text-blue-600";
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
 
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                
+                // Gửi request POST lên GAS
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: file.name,
+                        content: content
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        status.innerText = "✅ Thành công! Dữ liệu đã được cập nhật.";
+                        status.className = "mt-4 text-center text-sm font-medium text-green-600";
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    status.innerText = "❌ Lỗi: " + error.message;
+                    status.className = "mt-4 text-center text-sm font-medium text-red-600";
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+            };
+            
+            // Đọc file dưới dạng text (VBA xuất CSV thường là UTF-8 hoặc ANSI, GAS xử lý tốt UTF-8)
+            reader.readAsText(file);
+        }
+    </script>
 </body>
 </html>
