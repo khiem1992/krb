@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File CSV - Đơn Giản</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .file-upload-area {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        .file-upload-area.dragover {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+        }
+        .upload-animation {
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen">
+    
+    <!-- Security Modal -->
+    <div id="security-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center transform transition-all">
+            <div class="mb-6">
+                <div class="mx-auto w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Xác Thực Truy Cập</h2>
+                <p class="text-slate-500">Nhập mật khẩu để tiếp tục</p>
+            </div>
+            <form onsubmit="event.preventDefault(); checkSecurity();" class="space-y-4">
+                <input type="password" id="api-key-input" 
+                    class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-center text-lg font-semibold tracking-wider" 
+                    placeholder="••••••••" required autofocus autocomplete="off">
+                <p id="security-error" class="text-red-500 text-sm hidden font-medium">❌ Mật khẩu không đúng!</p>
+                <button type="submit" class="w-full bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl active:scale-95">
+                    Đăng Nhập
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+        <div class="container mx-auto px-4 py-8 max-w-2xl">
+            
+            <!-- Header -->
+            <div class="text-center mb-8 upload-animation">
+                <div class="inline-block p-4 bg-indigo-100 rounded-full mb-4">
+                    <svg class="w-16 h-16 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                </div>
+                <h1 class="text-4xl font-bold text-slate-900 mb-2">Upload File CSV</h1>
+                <p class="text-slate-600 text-lg">Tải lên file báo cáo dự phòng</p>
+            </div>
+
+            <!-- Upload Card -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 upload-animation" style="animation-delay: 0.1s;">
+                
+                <!-- Drag & Drop Area -->
+                <div id="drop-area" class="file-upload-area rounded-xl p-12 text-center mb-6 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
+                    <svg class="w-20 h-20 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-xl font-semibold text-slate-700 mb-2">Kéo thả file vào đây</p>
+                    <p class="text-slate-500 mb-4">hoặc</p>
+                    <label for="csv-file-input" class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all cursor-pointer shadow-md hover:shadow-lg">
+                        Chọn File
+                    </label>
+                    <input type="file" id="csv-file-input" accept=".csv" class="hidden">
+                    <p class="text-sm text-slate-400 mt-4">Chỉ chấp nhận file .csv (Tối đa 5MB)</p>
+                </div>
+
+                <!-- File Info -->
+                <div id="file-info" class="hidden bg-indigo-50 rounded-lg p-4 mb-6 border border-indigo-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <div>
+                                <p id="file-name" class="font-semibold text-slate-900"></p>
+                                <p id="file-size" class="text-sm text-slate-600"></p>
+                            </div>
+                        </div>
+                        <button onclick="clearFile()" class="text-red-500 hover:text-red-700 p-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="upload-progress" class="hidden mb-6">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-sm font-medium text-slate-700" id="progress-text">Đang upload...</span>
+                        <span class="text-sm font-medium text-indigo-600" id="progress-percent">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-3">
+                        <div id="progress-bar" class="bg-gradient-to-r from-indigo-600 to-purple-600 h-3 rounded-full transition-all duration-300 shadow-lg" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Status Message -->
+                <div id="upload-status" class="hidden rounded-lg p-4 mb-6"></div>
+
+                <!-- Upload Button -->
+                <button onclick="uploadCSVFile()" id="upload-btn" 
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>Tải Lên Google Drive</span>
+                </button>
+            </div>
+
+            <!-- Info Card -->
+            <div class="bg-blue-50 rounded-xl p-6 border border-blue-200 upload-animation" style="animation-delay: 0.2s;">
+                <h3 class="font-bold text-blue-900 mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Lưu ý:
+                </h3>
+                <ul class="text-sm text-blue-800 space-y-2">
+                    <li class="flex items-start gap-2">
+                        <span class="text-blue-600 mt-0.5">✓</span>
+                        <span>File sẽ được lưu vào Google Drive với tên <strong>bcduphong.csv</strong></span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-blue-600 mt-0.5">✓</span>
+                        <span>Tự động cập nhật nội dung (overwrite) nếu file đã tồn tại</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-blue-600 mt-0.5">✓</span>
+                        <span>Các phiên bản cũ sẽ được lưu tự động trong lịch sử</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz_7PFF43CENmruBnZfslWxE4XJVGH38CPYOenRw_xpZKVV54KZvS_Oi5dmDKrQadpsfQ/exec';
+        let sessionApiKey = null;
+        let selectedFile = null;
+
+        // Security Check
+        function checkSecurity() {
+            const input = document.getElementById('api-key-input');
+            const errorMsg = document.getElementById('security-error');
+            const key = input.value.trim();
+            
+            if (key) {
+                sessionApiKey = key;
+                document.getElementById('security-modal').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                errorMsg.classList.add('hidden');
+            } else {
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        // Drag & Drop Handlers
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('csv-file-input');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
+        });
+
+        dropArea.addEventListener('drop', handleDrop, false);
+        dropArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.csv')) {
+                showStatus('error', '❌ Chỉ chấp nhận file .csv!');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                showStatus('error', '❌ File quá lớn! Tối đa 5MB.');
+                return;
+            }
+            
+            selectedFile = file;
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('file-size').textContent = formatFileSize(file.size);
+            document.getElementById('file-info').classList.remove('hidden');
+            document.getElementById('upload-status').classList.add('hidden');
+        }
+
+        function clearFile() {
+            selectedFile = null;
+            fileInput.value = '';
+            document.getElementById('file-info').classList.add('hidden');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        async function uploadCSVFile() {
+            if (!selectedFile) {
+                showStatus('error', '❌ Vui lòng chọn file trước!');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('upload-btn');
+            const progressDiv = document.getElementById('upload-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const progressPercent = document.getElementById('progress-percent');
+
+            try {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Đang xử lý...</span>';
+                
+                progressDiv.classList.remove('hidden');
+                document.getElementById('upload-status').classList.add('hidden');
+
+                // Step 1: Read file
+                progressBar.style.width = '20%';
+                progressPercent.textContent = '20%';
+                progressText.textContent = 'Đang đọc file...';
+                
+                const base64Data = await readFileAsBase64(selectedFile);
+
+                // Step 2: Prepare data
+                progressBar.style.width = '40%';
+                progressPercent.textContent = '40%';
+                progressText.textContent = 'Đang chuẩn bị dữ liệu...';
+
+                const formData = new URLSearchParams();
+                formData.append('key', sessionApiKey);
+                formData.append('fileData', base64Data);
+                formData.append('fileName', selectedFile.name);
+
+                // Step 3: Upload
+                progressBar.style.width = '60%';
+                progressPercent.textContent = '60%';
+                progressText.textContent = 'Đang tải lên Google Drive...';
+
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressBar.style.width = '80%';
+                progressPercent.textContent = '80%';
+
+                const result = await response.json();
+
+                // Step 4: Complete
+                progressBar.style.width = '100%';
+                progressPercent.textContent = '100%';
+                progressText.textContent = 'Hoàn thành!';
+
+                if (result.status === 'success') {
+                    showStatus('success', `✅ Upload thành công!<br><small class="text-green-600">File ID: ${result.fileId} | Phiên bản thứ ${result.versionCount}</small>`);
+                    clearFile();
+                } else {
+                    showStatus('error', '❌ ' + (result.message || 'Upload thất bại!'));
+                }
+
+            } catch (error) {
+                console.error('Lỗi:', error);
+                showStatus('error', '❌ Lỗi: ' + error.message);
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg><span>Tải Lên Google Drive</span>';
+                
+                setTimeout(() => {
+                    progressDiv.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                }, 3000);
+            }
+        }
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('upload-status');
+            statusDiv.className = 'rounded-lg p-4 mb-6 border-l-4 ' + 
+                (type === 'success' ? 'bg-green-50 border-green-500 text-green-800' : 'bg-red-50 border-red-500 text-red-800');
+            statusDiv.innerHTML = '<p class="font-medium">' + message + '</p>';
+            statusDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
