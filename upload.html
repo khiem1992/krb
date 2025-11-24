@@ -3,77 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Báo Cáo CSV</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Upload Dữ Liệu (bc.csv)</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #1d4ed8; }
+        #status { margin-top: 15px; font-size: 0.9em; }
+    </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Cập Nhật Dữ Liệu</h2>
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2">Chọn file CSV (baocao.csv)</label>
-            <input type="file" id="csvFile" accept=".csv" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <button onclick="uploadFile()" id="btnUpload" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 flex justify-center items-center">
-            <span>Tải Lên Server</span>
-        </button>
-        
-        <p id="status" class="mt-4 text-center text-sm font-medium"></p>
+<body>
+    <div class="card">
+        <h2>Cập Nhật Dữ Liệu</h2>
+        <input type="password" id="passInput" placeholder="Nhập mật khẩu (mit)...">
+        <input type="file" id="csvFile" accept=".csv">
+        <button onclick="uploadFile()" id="btnUpload">Tải Lên</button>
+        <p id="status"></p>
     </div>
 
     <script>
-        const GAS_URL = 'YOUR_GAS_WEB_APP_URL'; // DÁN LINK WEB APP CỦA BẠN VÀO ĐÂY
+        // --- THAY LINK GAS CỦA BẠN VÀO DƯỚI ĐÂY ---
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw49bE60Uxc9epBQolJbYLzZ2DEEZDb1ojTIER1HuCbGrje1r4aQpbRtELPNtmeZyu7iQ/exec'; 
 
         function uploadFile() {
+            const pass = document.getElementById('passInput').value;
             const fileInput = document.getElementById('csvFile');
             const file = fileInput.files[0];
             const status = document.getElementById('status');
             const btn = document.getElementById('btnUpload');
 
-            if (!file) {
-                status.innerText = "Vui lòng chọn file!";
-                status.className = "mt-4 text-center text-sm font-medium text-red-500";
-                return;
-            }
+            if (!file) { status.textContent = "❌ Chưa chọn file!"; return; }
+            if (!pass) { status.textContent = "❌ Chưa nhập mật khẩu!"; return; }
 
-            status.innerText = "Đang tải lên...";
-            status.className = "mt-4 text-center text-sm font-medium text-blue-600";
+            status.textContent = "⏳ Đang tải lên...";
+            status.style.color = "blue";
             btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const content = e.target.result;
-                
-                // Gửi request POST lên GAS
                 fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({
-                        name: file.name,
-                        content: content
+                        password: pass, // Gửi mật khẩu lên để GAS kiểm tra
+                        content: e.target.result
                     })
                 })
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        status.innerText = "✅ Thành công! Dữ liệu đã được cập nhật.";
-                        status.className = "mt-4 text-center text-sm font-medium text-green-600";
+                        status.textContent = "✅ " + data.message;
+                        status.style.color = "green";
                     } else {
-                        throw new Error(data.message);
+                        status.textContent = "❌ " + data.message;
+                        status.style.color = "red";
                     }
                 })
-                .catch(error => {
-                    status.innerText = "❌ Lỗi: " + error.message;
-                    status.className = "mt-4 text-center text-sm font-medium text-red-600";
+                .catch(err => {
+                    status.textContent = "❌ Lỗi kết nối!";
+                    status.style.color = "red";
                 })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                });
+                .finally(() => btn.disabled = false);
             };
-            
-            // Đọc file dưới dạng text (VBA xuất CSV thường là UTF-8 hoặc ANSI, GAS xử lý tốt UTF-8)
             reader.readAsText(file);
         }
     </script>
