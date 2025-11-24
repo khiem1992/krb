@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload CSV xem dữ liệu</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        table { border-collapse: collapse; width: 100%; margin-top: 20px }
+        th, td { border: 1px solid #ccc; padding: 6px; font-size: 14px; }
+        th { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+
+<h2>Tải CSV lên để xem dữ liệu</h2>
+
+<input type="file" id="csvFile" accept=".csv">
+<button onclick="readCSV()">Đọc CSV</button>
+
+<div id="output"></div>
+
+<script>
+function readCSV() {
+    const fileInput = document.getElementById("csvFile");
+    if (!fileInput.files.length) {
+        alert("Vui lòng chọn file CSV!");
+        return;
+    }
+
+    Papa.parse(fileInput.files[0], {
+        complete: function(result) {
+            const data = result.data;
+            let html = "<table>";
+
+            // Render dòng đầu tiên làm header
+            html += "<tr>";
+            data[0].forEach(h => html += `<th>${h}</th>`);
+            html += "</tr>";
+
+            // Render các dòng dữ liệu
+            for (let i = 1; i < data.length; i++) {
+                html += "<tr>";
+                data[i].forEach(c => html += `<td>${c}</td>`);
+                html += "</tr>";
+            }
+
+            html += "</table>";
+            document.getElementById("output").innerHTML = html;
+        }
+    });
+}
+</script>
+
+</body>
+</html>
