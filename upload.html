@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quản lý Phiên bản File</title>
+  <title>Quản lý Phiên bản File - Bảo Mật</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
@@ -12,7 +12,6 @@
     body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none; border-radius: 10px; }
     .version-row:hover { background-color: #f1f3f5; }
-    /* Diff Styles */
     .diff-container { max-height: 400px; overflow-y: auto; font-family: monospace; background: #fff; padding: 10px; border: 1px solid #ddd; }
     .diff-added { background-color: #d4edda; color: #155724; display: block; }
     .diff-removed { background-color: #f8d7da; color: #721c24; text-decoration: line-through; opacity: 0.7; display: block; }
@@ -31,8 +30,8 @@
 
   <div class="row mb-4">
     <div class="col text-center">
-      <h2 class="text-primary fw-bold"><i class="fa-solid fa-cloud-arrow-up"></i> Quản lý File BCDuPhong.csv</h2>
-      <p class="text-muted">Hệ thống quản lý phiên bản & Khôi phục dữ liệu</p>
+      <h2 class="text-primary fw-bold"><i class="fa-solid fa-user-shield"></i> Quản lý File & Bảo Mật</h2>
+      <p class="text-muted">Hệ thống yêu cầu mật khẩu quản trị</p>
     </div>
   </div>
 
@@ -45,7 +44,7 @@
           <i class="fa-solid fa-paper-plane"></i> Cập nhật ngay
         </button>
       </div>
-      <small class="text-muted text-fst-italic">* File mới sẽ thay thế nội dung hiện tại (Giữ nguyên ID). Nội dung cũ sẽ được lưu vào lịch sử.</small>
+      <small class="text-muted text-fst-italic">* File mới sẽ thay thế nội dung hiện tại (Giữ nguyên ID).</small>
     </div>
   </div>
 
@@ -67,7 +66,7 @@
             </tr>
           </thead>
           <tbody id="revisionTableBody">
-            <tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>
+            <tr><td colspan="5" class="text-center text-muted py-4">Vui lòng đăng nhập để xem dữ liệu...</td></tr>
           </tbody>
         </table>
       </div>
@@ -76,6 +75,24 @@
        <button id="btnCompare" class="btn btn-warning disabled" onclick="compareVersions()">
          <i class="fa-solid fa-code-compare"></i> So sánh 2 bản đã chọn
        </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="loginModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="fa-solid fa-lock"></i> Xác thực Admin</h5>
+      </div>
+      <div class="modal-body">
+        <p>Yêu cầu nhập mã để tiếp tục truy cập.</p>
+        <input type="password" id="inputPass" class="form-control text-center fs-4" placeholder="Nhập mật khẩu..." onkeydown="if(event.key==='Enter') doLogin()">
+        <div id="loginError" class="text-danger mt-2 text-center" style="display:none;"></div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-primary px-4 w-50" onclick="doLogin()">Truy cập</button>
+      </div>
     </div>
   </div>
 </div>
@@ -103,27 +120,69 @@
 </div>
 
 <script>
-  // ==========================================
-  // CẤU HÌNH API
-  // ==========================================
   // 👇👇👇 DÁN LINK WEB APP CỦA BẠN VÀO DƯỚI ĐÂY 👇👇👇
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLJs7CqnQB0Xjt3C5M2sfAp4O-LTWV5JVCXAOCNy0RIAouRmFDaP0a9fzxbogJ95qW/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUiFpsb-rtpVQRc4Fs2aFuFaSDm3yr42-FXSaOR7NpqqN3jZqrQ06K23rvzC723Nm3/exec";
   
   let revisionsData = [];
+  let USER_PASSWORD = ""; // Biến lưu mật khẩu tạm thời
 
-  // 1. INIT
+  // 1. INIT: Hiện Modal Login thay vì tải dữ liệu ngay
   window.onload = function() {
-    loadRevisions();
+    const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+    loginModal.show();
+    setTimeout(() => document.getElementById('inputPass').focus(), 500);
   };
 
   function toggleLoading(show) {
     document.getElementById('loading').style.display = show ? 'flex' : 'none';
   }
 
-  // 2. GỌI API (Fetch)
+  // 🔐 HÀM XỬ LÝ ĐĂNG NHẬP
+  function doLogin() {
+    const pass = document.getElementById('inputPass').value;
+    const errDiv = document.getElementById('loginError');
+    if(!pass) {
+      errDiv.textContent = "Vui lòng nhập mật khẩu!";
+      errDiv.style.display = 'block';
+      return;
+    }
+    
+    // Lưu pass vào biến tạm
+    USER_PASSWORD = pass;
+    
+    // Thử gọi API list để check pass
+    toggleLoading(true);
+    callAPI({ action: 'list' }).then(data => {
+      toggleLoading(false);
+      
+      // Nếu server trả về lỗi liên quan mật khẩu
+      if (data && data.status === 'error' && data.message.includes('mật khẩu')) {
+        USER_PASSWORD = "";
+        errDiv.textContent = "⛔ Mật khẩu không đúng!";
+        errDiv.style.display = 'block';
+        document.getElementById('inputPass').value = '';
+      } 
+      // Nếu thành công (trả về mảng)
+      else if (Array.isArray(data)) {
+        // Tắt modal
+        const modalEl = document.getElementById('loginModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        modalInstance.hide();
+        
+        // Render dữ liệu
+        renderTable(data);
+      } else {
+        alert("Lỗi khác: " + (data ? data.message : 'Unknown'));
+      }
+    });
+  }
+
+  // 2. GỌI API (ĐÃ BỔ SUNG GỬI PASSWORD)
   async function callAPI(payload) {
     try {
-      // Sử dụng POST với text/plain để tránh Preflight CORS
+      // 🟢 QUAN TRỌNG: Luôn đính kèm mật khẩu vào gói tin
+      payload.password = USER_PASSWORD;
+
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -136,26 +195,26 @@
     }
   }
 
-  // 3. UPLOAD FILE (Chuyển Base64)
+  // 3. UPLOAD FILE
   function handleUpload() {
+    // Check lại pass
+    if(!USER_PASSWORD) { alert("Vui lòng đăng nhập lại."); location.reload(); return; }
+
     const fileInput = document.getElementById('fileInput');
     const file = fileInput.files[0];
     
     if (!file) { alert('Vui lòng chọn file!'); return; }
     
     toggleLoading(true);
-    
     const reader = new FileReader();
-    reader.readAsDataURL(file); // Đọc file thành chuỗi base64
+    reader.readAsDataURL(file);
     reader.onload = async function(e) {
       const base64Content = e.target.result;
-      
       const res = await callAPI({
         action: 'upload',
         content: base64Content,
         mimeType: file.type || 'text/csv'
       });
-
       toggleLoading(false);
       if(res && res.status === 'success') {
         alert(res.message);
@@ -167,16 +226,17 @@
     };
   }
 
-  // 4. LOAD DANH SÁCH
+  // 4. LOAD REVISIONS
   async function loadRevisions() {
+    if(!USER_PASSWORD) return; // Chưa login thì ko load
     toggleLoading(true);
     const data = await callAPI({ action: 'list' });
     toggleLoading(false);
     
     if (Array.isArray(data)) {
       renderTable(data);
-    } else {
-      document.getElementById('revisionTableBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Không tải được dữ liệu.</td></tr>';
+    } else if (data && data.status === 'error') {
+       alert(data.message);
     }
   }
 
@@ -221,19 +281,19 @@
     });
   }
 
-  // 5. KHÔI PHỤC
+  // 5. RESTORE
   async function restoreRev(id) {
-    if(!confirm('Khôi phục phiên bản này sẽ ghi đè lên nội dung hiện tại?')) return;
+    if(!confirm('Khôi phục phiên bản này?')) return;
     toggleLoading(true);
     const res = await callAPI({ action: 'restore', id: id });
     toggleLoading(false);
-    if(res && res.status === 'success') { alert('Đã khôi phục thành công!'); loadRevisions(); }
+    if(res && res.status === 'success') { alert('Thành công!'); loadRevisions(); }
     else alert('Lỗi: ' + (res ? res.message : 'Unknown'));
   }
 
-  // 6. XÓA
+  // 6. DELETE
   async function deleteRev(id) {
-    if(!confirm('Cảnh báo: Xóa vĩnh viễn phiên bản này?')) return;
+    if(!confirm('Xóa vĩnh viễn?')) return;
     toggleLoading(true);
     const res = await callAPI({ action: 'delete', id: id });
     toggleLoading(false);
@@ -246,9 +306,7 @@
     toggleLoading(true);
     const content = await callAPI({ action: 'getContent', id: id });
     toggleLoading(false);
-    
-    if (typeof content !== 'string') { alert('Không tải được nội dung'); return; }
-
+    if (typeof content !== 'string') { alert('Lỗi tải nội dung'); return; }
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -259,12 +317,12 @@
     document.body.removeChild(link);
   }
 
-  // 8. SO SÁNH
+  // 8. COMPARE
   function checkCompareLimit(checkbox) {
     const checked = document.querySelectorAll('.compare-check:checked');
     if (checked.length > 2) {
       checkbox.checked = false;
-      alert("Chỉ được chọn 2 phiên bản để so sánh!");
+      alert("Chỉ được chọn 2 phiên bản!");
     }
     const btn = document.getElementById('btnCompare');
     if (checked.length === 2) btn.classList.remove('disabled');
@@ -274,7 +332,6 @@
   async function compareVersions() {
     const checked = document.querySelectorAll('.compare-check:checked');
     if (checked.length !== 2) return;
-    
     const id1 = checked[0].value;
     const id2 = checked[1].value;
     
@@ -284,7 +341,6 @@
 
     if (!Array.isArray(contents)) { alert('Lỗi tải dữ liệu so sánh'); return; }
 
-    // Logic: Index lớn hơn trong revisionsData = Cũ hơn
     const idx1 = revisionsData.findIndex(r => r.id === id1);
     const idx2 = revisionsData.findIndex(r => r.id === id2);
     
@@ -299,7 +355,6 @@
     const diff = Diff.diffLines(oldText, newText);
     const display = document.getElementById('diffOutput');
     display.innerHTML = '';
-    
     const fragment = document.createDocumentFragment();
     diff.forEach((part) => {
       const span = document.createElement('div');
@@ -316,7 +371,6 @@
       }
       fragment.appendChild(span);
     });
-    
     display.appendChild(fragment);
     new bootstrap.Modal(document.getElementById('compareModal')).show();
   }
