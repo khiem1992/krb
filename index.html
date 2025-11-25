@@ -390,7 +390,8 @@ function renderVersionList() {
         const dateStr = `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`;
         const timeStr = `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
         
-        const isCurrent = version.id === currentRevisionId;
+        // *** Check nếu là version đang xem ***
+        const isCurrent = (version.id === currentRevisionId) || (index === 0 && currentRevisionId === 'current');
         const bgClass = isCurrent ? 'bg-blue-50 border-blue-300' : 'bg-white border-slate-200';
         
         html += `
@@ -420,7 +421,6 @@ function renderVersionList() {
     
     container.innerHTML = html;
 }
-
 async function loadVersion(versionId, versionLabel) {
     closeHistoryModal();
     currentRevisionId = versionId;
@@ -439,15 +439,28 @@ function loadCurrentVersion() {
     currentRevisionId = 'current';
     
     // Ẩn banner cảnh báo
-    document.getElementById('version-warning').classList.add('hidden');
+    const warning = document.getElementById('version-warning');
+    warning.classList.add('hidden');
     
-    // Tải dữ liệu mới nhất
-    fetchData(true); // Force reload
+    // *** QUAN TRỌNG: Xóa cache cũ để buộc tải lại ***
+    localStorage.removeItem(CACHE_KEY);
+    
+    // Hiển thị loading
+    pageLoader.style.display = 'flex';
+    dashboard.classList.add('hidden');
+    
+    // Tải dữ liệu mới nhất (force = true)
+    fetchData(true);
 }
 
 async function fetchDataWithVersion(versionId) {
+    // *** Thêm versionId vào URL khi tải version cũ ***
     const url = `${GAS_WEB_APP_URL}key=${encodeURIComponent(sessionApiKey)}&versionId=${versionId}&t=${Date.now()}`;
     setLoading(true);
+    
+    // Hiển thị loading
+    pageLoader.style.display = 'flex';
+    dashboard.classList.add('hidden');
     
     try {
         const response = await fetch(url);
@@ -470,6 +483,7 @@ async function fetchDataWithVersion(versionId) {
         console.error('Lỗi tải version:', err);
         errorDetails.textContent = err.message;
         errorBanner.classList.remove('hidden');
+        hideLoader();
     } finally {
         setLoading(false);
     }
@@ -488,12 +502,15 @@ async function fetchDataWithVersion(versionId) {
 
        function fetchData(force = false) {
     if (!sessionApiKey) return;
+    
+    // *** QUAN TRỌNG: Không thêm versionId vào URL khi load bản mới nhất ***
     const url = `${GAS_WEB_APP_URL}key=${encodeURIComponent(sessionApiKey)}&t=${Date.now()}${force ? '&force=true' : ''}`;
     setLoading(force);
+    
     fetch(url).then(r => r.json()).then(res => {
         if (res.status === 'error') {
             if (res.message && res.message.includes('Truy cập bị từ chối')) {
-                localStorage.removeItem(API_STORAGE_KEY); // Tự động xóa mật khẩu sai
+                localStorage.removeItem(API_STORAGE_KEY);
                 throw new Error('Mật khẩu không đúng hoặc đã thay đổi! Vui lòng nhập lại.');
             }
             throw new Error(res.message || 'Lỗi server');
@@ -502,21 +519,23 @@ async function fetchDataWithVersion(versionId) {
         updateInfo(res);
         vipRoomsData = res.vipRooms || {};
         
-        // *** PHẦN SỬA MỚI: Kiểm tra nếu đang xem version lịch sử ***
-        if (res.isHistoricalVersion || currentRevisionId !== 'current') {
-            // Luôn render lại khi xem lịch sử (bỏ qua cache)
+        // *** LOGIC MỚI: Kiểm tra nếu đang ở chế độ xem version cũ ***
+        if (currentRevisionId !== 'current') {
+            // Đang xem lịch sử -> Bỏ qua cache, render ngay
             globalData = res.data;
             renderDashboard(false);
             hideLoader();
             if (force) showToast('Đã tải phiên bản lịch sử');
         } else {
-            // Logic cache bình thường cho phiên bản mới nhất
+            // *** Đang ở chế độ xem bản mới nhất ***
             const cached = getCache();
-            if (!cached || cached.lastUpdated !== res.lastUpdated) {
+            
+            // Nếu force reload hoặc không có cache hoặc dữ liệu thay đổi
+            if (force || !cached || cached.lastUpdated !== res.lastUpdated) {
                 globalData = res.data;
                 setCache(res.data, res.lastUpdated, res.a1, res.vipRooms);
                 renderDashboard(false);
-                if (force) showToast('Cập nhật thành công!');
+                if (force) showToast('Đã cập nhật dữ liệu mới nhất!');
             } else if (force) { 
                 showToast('Dữ liệu không thay đổi'); 
             }
